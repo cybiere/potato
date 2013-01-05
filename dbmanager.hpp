@@ -6,14 +6,21 @@
 #include <QtSql>
 
 
-class dbManager
+class dbManager : public QObject
 {
+    Q_OBJECT
+
     QSqlDatabase db;
     QSqlQuery query;
 public:
     dbManager();
-    void addSong(QString file);
     QStringList getSrcDirs();
+    void addSrc(QString);
+    void delSrc(QString);
+    QList<QStringList> *getBiblio();
+
+public slots :
+    QStringList addSong(QString);
 };
 
 #endif // DBMANAGER_HPP

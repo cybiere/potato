@@ -12,6 +12,9 @@ class MainWindow : public QMainWindow
     QWidget *options;
     QTreeWidget *biblio;
     QListWidget *srcDirList;
+    void scanDir(QString);
+    void insertSong(QStringList);
+    void regenBiblio();
 
 public:
     MainWindow();
