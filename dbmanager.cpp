@@ -1,5 +1,4 @@
 #include "dbmanager.hpp"
-#include <iostream>
 
 dbManager::dbManager()
 {
@@ -90,4 +89,16 @@ QList<QStringList> *dbManager::getBiblio()
     }
 
     return songs;
+}
+
+QStringList dbManager::getSong(QString titre,QString album,QString artist)
+{
+    query.prepare("SELECT title,artist,album,genre,nb_played,rating,file FROM song WHERE title=? AND album=? AND artist=?");
+        query.bindValue("1",titre);
+        query.bindValue("2",album);
+        query.bindValue("3",artist);
+    query.exec();
+    query.first();
+
+    return QStringList(query.value(0).toString()) << query.value(1).toString() << query.value(2).toString() << query.value(3).toString() << query.value(4).toString() << query.value(5).toString() << query.value(6).toString();
 }

@@ -6,5 +6,8 @@
         <file>ico/del.png</file>
         <file>ico/add.png</file>
         <file>ico/ref.png</file>
+        <file>ico/next.png</file>
+        <file>ico/prev.png</file>
+        <file>ico/loop.png</file>
     </qresource>
 </RCC>

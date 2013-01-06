@@ -18,6 +18,7 @@ public:
     void addSrc(QString);
     void delSrc(QString);
     QList<QStringList> *getBiblio();
+    QStringList getSong(QString,QString,QString);
 
 public slots :
     QStringList addSong(QString);
