@@ -11,6 +11,9 @@ MainWindow::MainWindow()
 
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
     connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
+    connect(media,SIGNAL(finished()),this,SLOT(songEnd()));
+
+    playing = NULL;
 
     ////////////////////    Menu    ////////////////////
     //Menu Fichier
@@ -32,7 +35,8 @@ MainWindow::MainWindow()
         actionNext = new QAction(QIcon(":/ico/next.png"),tr("Suivant"), this);
             connect(actionNext,SIGNAL(triggered()),this,SLOT(next()));
         actionLoop = new QAction(QIcon(":/ico/loop_off.png"),tr("Répéter chanson"), this);
-            connect(actionNext,SIGNAL(triggered()),this,SLOT(loop()));
+            connect(actionLoop,SIGNAL(triggered()),this,SLOT(loop()));
+            loopState = 0;
 
         menuLecture->addAction(actionPlay);
         menuLecture->addAction(actionStop);
@@ -48,7 +52,6 @@ MainWindow::MainWindow()
         QToolBar *ctrlBar = addToolBar("Controles");
         ctrlBar->setFloatable(false);
         ctrlBar->setMovable(false);
-        ctrlBar->addAction(actionQuit);
 
         ctrlBar->addAction(actionPlay);
         ctrlBar->addAction(actionStop);
@@ -154,8 +157,9 @@ MainWindow::MainWindow()
     //mainZone
     //QTreeWidget des chansons de la liste "lecture en cours"
     current = new QTreeWidget;
-    QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
-    current->setHeaderItem(headers);
+        QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
+        current->setHeaderItem(headers);
+        connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
 
     //rightDock
     //Cover, wikipédia, playlists
@@ -355,39 +359,159 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
 
 void MainWindow::play()
 {
+    if(media->state() == Phonon::PlayingState)
+    {
+        actionPlay->setIcon(QIcon(":/ico/play.png"));
+        actionPlay->setText(tr("Lecture"));
+        media->pause();
+        setWindowTitle("[" + tr("Pause") + "] " + windowTitle());
+    }
+    else
+    {
+        if(playing == NULL)
+        {
+            if(current->topLevelItemCount() == 0)
+            {
+                return;
+            }
+            playing = current->topLevelItem(0);
+            media->setCurrentSource(playing->text(6));
+        }
+        setWindowTitle(playing->text(0) + " - " + playing->text(1) + " - PotatoPlayer");
 
+        actionPlay->setIcon(QIcon(":/ico/pause.png"));
+        actionPlay->setText(tr("Pause"));
+
+        media->play();
+        bold();
+    }
 }
 
 void MainWindow::stop()
 {
+    setWindowTitle("PotatoPlayer");
+    actionPlay->setIcon(QIcon(":/ico/play.png"));
+    actionPlay->setText(tr("Lecture"));
+    media->stop();
+    clear();
+}
 
+void MainWindow::clear()
+{
+    if(playing == NULL)
+        return;
+    QFont font;
+    font.setBold(false);
+    playing->setFont(0,font);
+    playing->setFont(1,font);
+    playing->setFont(2,font);
+    playing->setFont(3,font);
+    playing->setFont(4,font);
+    playing->setFont(5,font);
+    playing->setFont(6,font);
+}
+
+void MainWindow::bold()
+{
+    if(playing == NULL)
+        return;
+    QFont font;
+    font.setBold(true);
+    playing->setFont(0,font);
+    playing->setFont(1,font);
+    playing->setFont(2,font);
+    playing->setFont(3,font);
+    playing->setFont(4,font);
+    playing->setFont(5,font);
+    playing->setFont(6,font);
 }
 
 void MainWindow::prev()
 {
+    if(current->topLevelItemCount() == 0)
+        return;
 
+    stop();
+    if(playing != current->topLevelItem(0))
+    {
+        clear();
+        playing = current->itemAbove(playing);
+        bold();
+    }
+    else if(loopState == 2)
+    {
+        clear();
+        playing = current->topLevelItem(current->topLevelItemCount()-1);
+        bold();
+    }
+
+    media->setCurrentSource(playing->text(6));
+    play();
+}
+
+void MainWindow::songEnd()
+{
+    if(loopState == 1)
+    {
+        media->play();
+    }
+    else
+    {
+        next();
+    }
 }
 
 void MainWindow::next()
 {
+    if(current->topLevelItemCount() == 0)
+        return;
 
+    stop();
+    if(playing != current->topLevelItem(current->topLevelItemCount()-1))
+    {
+        clear();
+        playing = current->itemBelow(playing);
+        bold();
+        media->setCurrentSource(playing->text(6));
+        play();
+    }
+    else if(loopState == 2)
+    {
+        clear();
+        playing = current->topLevelItem(0);
+        bold();
+        media->setCurrentSource(playing->text(6));
+        play();
+    }
 }
 
 void MainWindow::loop()
 {
-    if(actionLoop->text() == tr("Répéter chanson"))
+    if(loopState == 0)
     {
         actionLoop->setIcon(QIcon(":/ico/loop_one.png"));
         actionLoop->setText(tr("Répéter tout"));
+        loopState = 1;
     }
-    else if(actionLoop->text() == tr("Répéter tout"))
+    else if(loopState == 1)
     {
         actionLoop->setIcon(QIcon(":/ico/loop_all.png"));
         actionLoop->setText(tr("Pas de répétition"));
+        loopState = 2;
     }
     else
     {
         actionLoop->setIcon(QIcon(":/ico/loop_off.png"));
         actionLoop->setText(tr("Répéter chanson"));
+        loopState = 0;
     }
+}
+
+void MainWindow::selectedSong(QTreeWidgetItem *item, int)
+{
+    stop();
+    playing = item;
+    bold();
+    media->setCurrentSource(playing->text(6));
+    play();
 }

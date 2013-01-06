@@ -27,6 +27,10 @@ class MainWindow : public QMainWindow
     QString convertTime(qint64);
     Phonon::MediaObject* media;
     Phonon::AudioOutput* output;
+    int loopState;
+    QTreeWidgetItem *playing;
+    void bold();
+    void clear();
 
 public:
     MainWindow();
@@ -45,7 +49,10 @@ public slots:
     void stop();
     void prev();
     void next();
+    void songEnd();
     void loop();
+    void selectedSong(QTreeWidgetItem*,int);
+
 };
 
 #endif // MAINWINDOW_HPP
