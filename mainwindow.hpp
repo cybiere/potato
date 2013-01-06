@@ -11,12 +11,15 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
     QWidget *options;
+    QWidget *plBlock;
     QTreeWidget *biblio;
     QListWidget *srcDirList;
     QTreeWidget *current;
+    QTreeWidget *plists;
     void scanDir(QString);
     void insertSong(QStringList);
     void regenBiblio();
+    void regenPlaylists();
     QAction *actionPlay;
     QAction *actionStop;
     QAction *actionPrev;
@@ -39,8 +42,11 @@ public:
 public slots:
     void showOptions();
     void showBiblio();
+    void showPlists();
     void addSourceDir();
     void delSourceDir();
+    void addPl();
+    void delPl();
     void refresh();
     void upTimeTot(qint64);
     void incrTimeCur(qint64);
@@ -52,6 +58,14 @@ public slots:
     void songEnd();
     void loop();
     void selectedSong(QTreeWidgetItem*,int);
+    void contextCurrent(QPoint);
+    void contextBiblio(QPoint);
+    void contextSrc(QPoint);
+    void contextPl(QPoint);
+    void playSelected();
+    void addCurrentToPl();
+    void addBiblioToPl();
+    void insertPl(QString,QTreeWidgetItem *,int);
 
 };
 

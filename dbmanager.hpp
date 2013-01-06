@@ -18,7 +18,15 @@ public:
     void addSrc(QString);
     void delSrc(QString);
     QList<QStringList> *getBiblio();
+    QStringList *getAssos(QString);
+    QStringList *getPlaylists();
+    QString getTitleFromPath(QString path);
+    QStringList getSong(QString);
     QStringList getSong(QString,QString,QString);
+    bool addPl(QString);
+    void delPl(QString);
+    int incrNb_played(QString,int);
+    void addSgToPl(QString,QString);
 
 public slots :
     QStringList addSong(QString);

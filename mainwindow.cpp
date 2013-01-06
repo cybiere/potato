@@ -95,14 +95,42 @@ MainWindow::MainWindow()
             //Pas de headers, pas d'expand au double clic
             biblio->header()->close();
             biblio->setExpandsOnDoubleClick(false);
+            biblio->setContextMenuPolicy(Qt::CustomContextMenu);
+            connect(biblio,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextBiblio(QPoint)));
             connect(biblio,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
+
+        //Playlists
+        plBlock = new QWidget;
+            QVBoxLayout *plLay = new QVBoxLayout;
+                plLay->setMargin(0);
+                plists = new QTreeWidget;
+                    plists->setContextMenuPolicy(Qt::CustomContextMenu);
+                    connect(plists,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextPl(QPoint)));
+                    //Pas de headers, pas d'expand au double clic
+                    plists->header()->close();
+                    plists->setExpandsOnDoubleClick(false);
+                    connect(plists,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
+                plLay->addWidget(plists);
+                //Gestion des listes de lecture
+                QHBoxLayout *ctrlLay = new QHBoxLayout;
+                    ctrlLay->setMargin(0);
+                    //ajouter une liste de lecture
+                    QPushButton *addPlist = new QPushButton(QIcon(":/ico/add.png"),"");
+                        connect(addPlist,SIGNAL(clicked()),this,SLOT(addPl()));
+                    //retirer la liste de lecture sélectionnée
+                    QPushButton *delPlist = new QPushButton(QIcon(":/ico/del.png"),"");
+                        connect(delPlist,SIGNAL(clicked()),this,SLOT(delPl()));
+                    ctrlLay->addWidget(addPlist);
+                    ctrlLay->addWidget(delPlist);
+                plLay->addLayout(ctrlLay);
+            plBlock->hide();
+            plBlock->setLayout(plLay);
 
 
         //Options
         options = new QWidget;
-            QLabel *titre = new QLabel(tr("Options"));
             QVBoxLayout *optionsLay = new QVBoxLayout;
-                optionsLay->addWidget(titre);
+                optionsLay->setMargin(0);
                 options->setLayout(optionsLay);
                 options->hide();
 
@@ -112,6 +140,8 @@ MainWindow::MainWindow()
                     //liste pour afficher
                     srcDirList = new QListWidget;
                     srcDirList->addItems(db->getSrcDirs());
+                    srcDirList->setContextMenuPolicy(Qt::CustomContextMenu);
+                    connect(srcDirList,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSrc(QPoint)));
                     QVBoxLayout *srcDirActionLay = new QVBoxLayout;
                         srcDirActionLay->setMargin(0);
                         //trois boutons :
@@ -138,6 +168,11 @@ MainWindow::MainWindow()
             bibl->setFlat(true);
             connect(bibl,SIGNAL(clicked()),this,SLOT(showBiblio()));
 
+        //bouton pour afficher les playlists
+        QPushButton *playl = new QPushButton(tr("Listes de lecture"));
+            playl->setFlat(true);
+            connect(playl,SIGNAL(clicked()),this,SLOT(showPlists()));
+
         //bouton pour afficher les options
         QPushButton *opt = new QPushButton(tr("Options"));
             opt->setFlat(true);
@@ -146,10 +181,16 @@ MainWindow::MainWindow()
         QFrame *separator = new QFrame();
             separator->setFrameShape(QFrame::HLine);
             separator->setFrameShadow(QFrame::Sunken);
+        QFrame *separator2 = new QFrame();
+            separator2->setFrameShape(QFrame::HLine);
+            separator2->setFrameShadow(QFrame::Sunken);
 
         leftLay->addWidget(bibl);
         leftLay->addWidget(biblio);
         leftLay->addWidget(separator);
+        leftLay->addWidget(playl);
+        leftLay->addWidget(plBlock);
+        leftLay->addWidget(separator2);
         leftLay->addWidget(opt);
         leftLay->addWidget(options);
     leftDock->setLayout(leftLay);
@@ -159,6 +200,8 @@ MainWindow::MainWindow()
     current = new QTreeWidget;
         QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
         current->setHeaderItem(headers);
+        current->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
         connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
 
     //rightDock
@@ -177,8 +220,166 @@ MainWindow::MainWindow()
 
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
+    regenPlaylists();
 }
 
+void MainWindow::contextCurrent(QPoint pos)
+{
+    if(current->currentItem() == NULL)
+        return;
+    QMenu *context = new QMenu();
+    QAction *titre = new QAction(current->currentItem()->text(0),this);
+    titre->setEnabled(false);
+    context->addAction(titre);
+    QMenu *playlists = context->addMenu(tr("Ajouter à une liste de lecture"));
+    for(int i=0;i<plists->topLevelItemCount();++i)
+    {
+        QAction *action = new QAction(plists->topLevelItem(i)->text(0),this);
+            connect(action,SIGNAL(triggered()),this,SLOT(addCurrentToPl()));
+        playlists->addAction(action);
+    }
+    context->exec(current->mapToGlobal(pos));
+}
+
+void MainWindow::contextBiblio(QPoint pos)
+{
+    QMenu *context = new QMenu();
+    QAction *actionPlay = new QAction(QIcon(":/ico/play.png"),tr("Lire"),this);
+        connect(actionPlay,SIGNAL(triggered()),this,SLOT(playSelected()));
+        if(biblio->currentItem()==NULL)
+            actionPlay->setEnabled(false);
+    context->addAction(actionPlay);
+    QMenu *playlists = context->addMenu(tr("Ajouter à une liste de lecture"));
+    for(int i=0;i<plists->topLevelItemCount();++i)
+    {
+        QAction *action = new QAction(plists->topLevelItem(i)->text(0),this);
+            connect(action,SIGNAL(triggered()),this,SLOT(addBiblioToPl()));
+        playlists->addAction(action);
+    }
+    context->exec(biblio->mapToGlobal(pos));
+}
+
+void MainWindow::contextSrc(QPoint pos)
+{
+    QMenu *context = new QMenu();
+    QAction *actionAdd = new QAction(QIcon(":/ico/add.png"),tr("Ajouter") + "...",this);
+        connect(actionAdd,SIGNAL(triggered()),this,SLOT(addSourceDir()));
+    context->addAction(actionAdd);
+    QAction *actionDel = new QAction(QIcon(":/ico/del.png"),tr("Supprimer"),this);
+        connect(actionDel,SIGNAL(triggered()),this,SLOT(delSourceDir()));
+        if(srcDirList->currentItem()==NULL)
+            actionDel->setEnabled(false);
+    context->addAction(actionDel);
+    QAction *actionRef = new QAction(QIcon(":/ico/ref.png"),tr("Rafraîchir"),this);
+        connect(actionRef,SIGNAL(triggered()),this,SLOT(refresh()));
+    context->addAction(actionRef);
+    context->exec(srcDirList->mapToGlobal(pos));
+}
+
+void MainWindow::contextPl(QPoint pos)
+{
+    QMenu *context = new QMenu();
+    QAction *actionAdd = new QAction(QIcon(":/ico/add.png"),tr("Ajouter") + "...",this);
+        connect(actionAdd,SIGNAL(triggered()),this,SLOT(addPl()));
+    context->addAction(actionAdd);
+    QAction *actionDel = new QAction(QIcon(":/ico/del.png"),tr("Supprimer"),this);
+        connect(actionDel,SIGNAL(triggered()),this,SLOT(delPl()));
+        if(plists->currentItem()==NULL)
+            actionDel->setEnabled(false);
+    context->addAction(actionDel);
+    context->exec(plists->mapToGlobal(pos));
+}
+
+void MainWindow::addCurrentToPl()
+{
+
+    insertPl(static_cast<QAction *>(sender())->text(),current->currentItem(),0);
+}
+
+void MainWindow::addBiblioToPl()
+{
+    int niveau;
+    QTreeWidgetItem *item = biblio->currentItem();
+    if(item == NULL)
+        return;
+
+    //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
+    //pas d'item parent = artiste
+    if(item->parent() == NULL)
+        niveau = 2;
+    //pas d'item enfant = chanson
+    else if(item->childCount() == 0)
+        niveau = 0;
+    //a la fois parent et enfant(s) = album
+    else
+        niveau = 1;
+
+    insertPl(static_cast<QAction *>(sender())->text(),item,niveau);
+}
+
+void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
+{
+
+    //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
+    //artiste
+    if(niveau == 2)
+    {
+        for(int i=0;i<item->childCount();++i)
+            insertPl(playlist,item->child(i),1);
+    }
+    //album
+    else if(niveau == 1)
+    {
+        for(int j=0;j<item->childCount();++j)
+            insertPl(playlist,item->child(j),0);
+    }
+    //chanson
+    else
+    {
+        QString titre;
+        QString path;
+        if(item->treeWidget() == current)
+        {
+            titre = item->text(0);
+            path = item->text(6);
+        }
+        else
+        {
+            titre = item->text(0);
+            QString album = item->parent()->text(0);
+            QString artiste = item->parent()->parent()->text(0);
+            QStringList song = db->getSong(titre,album,artiste);
+            path = song.takeAt(6);
+        }
+        db->addSgToPl(path,playlist);
+        QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(titre) << path);
+        bool found = false;
+        QTreeWidgetItem *pl;
+        for(int k=0;k<plists->topLevelItemCount() && !found;++k)
+        {
+            if(plists->topLevelItem(k)->text(0) == playlist)
+            {
+                pl = plists->topLevelItem(k);
+                found = true;
+            }
+        }
+        if(!found)
+        {
+            std::cerr << "erreur : Playlist inexistante." << std::endl;
+            exit(1);
+        }
+        pl->addChild(songItem);
+    }
+}
+
+void MainWindow::playSelected()
+{
+    if(biblio->currentItem() != NULL)
+    {
+        addToCurrent(biblio->currentItem(),0);
+        play();
+    }
+}
 
 void MainWindow::addSourceDir()
 {
@@ -190,6 +391,8 @@ void MainWindow::addSourceDir()
 
 void MainWindow::delSourceDir()
 {
+    if(srcDirList->currentItem() == NULL)
+        return;
     //suppression de l'élément courant dans la base de données puis dans l'interface
     db->delSrc(srcDirList->currentItem()->text());
     srcDirList->takeItem(srcDirList->currentRow());
@@ -242,6 +445,23 @@ void MainWindow::regenBiblio()
     while(!songs->isEmpty())
     {
         insertSong(songs->takeFirst());
+    }
+}
+
+void MainWindow::regenPlaylists()
+{
+    QStringList *pl = db->getPlaylists();
+    while(!pl->isEmpty())
+    {
+        QTreeWidgetItem *playlist = new QTreeWidgetItem(QStringList(pl->takeFirst()));
+        QStringList *assos = db->getAssos(playlist->text(0));
+        while(!assos->isEmpty())
+        {
+            QString path = assos->takeFirst();
+            QTreeWidgetItem *song = new QTreeWidgetItem(QStringList(db->getTitleFromPath(path)) << path);
+            playlist->addChild(song);
+        }
+        plists->addTopLevelItem(playlist);
     }
 }
 
@@ -301,6 +521,7 @@ void MainWindow::showOptions()
 {
     //masque la bibliothèque et affiche les options
     biblio->hide();
+    plBlock->hide();
     options->show();
 }
 
@@ -308,7 +529,16 @@ void MainWindow::showBiblio()
 {
     //affiche la bibliothèque et masque les options
     options->hide();
+    plBlock->hide();
     biblio->show();
+}
+
+void MainWindow::showPlists()
+{
+    //affiche la bibliothèque et masque les options
+    options->hide();
+    plBlock->show();
+    biblio->hide();
 }
 
 void MainWindow::upTimeTot(qint64 time)
@@ -345,7 +575,10 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
     //pas d'item enfant = chanson
     else if(item->childCount() == 0)
     {
-        current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(0),item->parent()->text(0),item->parent()->parent()->text(0))));
+        if(item->treeWidget() == plists)
+            current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(1))));
+        else
+            current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(0),item->parent()->text(0),item->parent()->parent()->text(0))));
     }
     //a la fois parent et enfant(s) = album
     else
@@ -451,6 +684,8 @@ void MainWindow::prev()
 
 void MainWindow::songEnd()
 {
+    db->incrNb_played(playing->text(6),playing->text(4).toInt());
+    playing->setText(4,QString::number(db->incrNb_played(playing->text(6),playing->text(4).toInt())));
     if(loopState == 1)
     {
         media->play();
@@ -514,4 +749,21 @@ void MainWindow::selectedSong(QTreeWidgetItem *item, int)
     bold();
     media->setCurrentSource(playing->text(6));
     play();
+}
+
+void MainWindow::addPl()
+{
+    QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
+    if (!plName.isEmpty())
+        if(db->addPl(plName))
+            plists->addTopLevelItem(new QTreeWidgetItem(QStringList(plName)));
+}
+
+void MainWindow::delPl()
+{
+    if(plists->currentItem() == 0)
+        return;
+    //suppression de l'élément courant dans la base de données puis dans l'interface
+    db->delPl(plists->currentItem()->text(0));
+    plists->takeTopLevelItem(plists->indexOfTopLevelItem(plists->currentItem()));
 }

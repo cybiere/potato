@@ -15,8 +15,8 @@ dbManager::dbManager()
 
     //Création des tables si nécessaire
     query = db.exec("CREATE TABLE IF NOT EXISTS song(file string primary key, artist string, title string, album string, genre string, nb_played integer, rating interger)");
-    query = db.exec("CREATE TABLE IF NOT EXISTS playlist(id integer primary key autoincrement, name string)");
-    query = db.exec("CREATE TABLE IF NOT EXISTS asso_song_pl(pl integer, sg string)");
+    query = db.exec("CREATE TABLE IF NOT EXISTS playlist(name string primary key)");
+    query = db.exec("CREATE TABLE IF NOT EXISTS asso_song_pl(pl string, sg string)");
     query = db.exec("CREATE TABLE IF NOT EXISTS srcDir(dir string)");
 }
 
@@ -91,6 +91,42 @@ QList<QStringList> *dbManager::getBiblio()
     return songs;
 }
 
+QStringList *dbManager::getPlaylists()
+{
+    QStringList *pl = new QStringList;
+    query.prepare("SELECT name FROM playlist");
+    query.exec();
+    while(query.next())
+    {
+        pl->append(query.value(0).toString());
+    }
+
+    return pl;
+}
+
+QStringList *dbManager::getAssos(QString pl)
+{
+    QStringList *songs = new QStringList;
+    query.prepare("SELECT sg FROM asso_song_pl WHERE pl=?");
+        query.bindValue("1",pl);
+    query.exec();
+    while(query.next())
+    {
+        songs->append(query.value(0).toString());
+    }
+    return songs;
+}
+
+QStringList dbManager::getSong(QString path)
+{
+    query.prepare("SELECT title,artist,album,genre,nb_played,rating,file FROM song WHERE file=?");
+        query.bindValue("1",path);
+    query.exec();
+    query.first();
+
+    return QStringList(query.value(0).toString()) << query.value(1).toString() << query.value(2).toString() << query.value(3).toString() << query.value(4).toString() << query.value(5).toString() << query.value(6).toString();
+}
+
 QStringList dbManager::getSong(QString titre,QString album,QString artist)
 {
     query.prepare("SELECT title,artist,album,genre,nb_played,rating,file FROM song WHERE title=? AND album=? AND artist=?");
@@ -101,4 +137,57 @@ QStringList dbManager::getSong(QString titre,QString album,QString artist)
     query.first();
 
     return QStringList(query.value(0).toString()) << query.value(1).toString() << query.value(2).toString() << query.value(3).toString() << query.value(4).toString() << query.value(5).toString() << query.value(6).toString();
+}
+
+void dbManager::addSgToPl(QString sg, QString pl)
+{
+    query.prepare("INSERT INTO asso_song_pl (sg,pl) VALUES (?,?)");
+         query.bindValue("1", sg);
+         query.bindValue("2", pl);
+    query.exec();
+}
+
+bool dbManager::addPl(QString nom)
+{
+    query.prepare("SELECT *FROM playlist WHERE name=?");
+        query.bindValue("1", nom);
+    query.exec();
+    if(query.first())
+        return false;
+
+    query.prepare("INSERT INTO playlist (name) VALUES (?)");
+         query.bindValue("1", nom);
+    query.exec();
+    return true;
+}
+
+int dbManager::incrNb_played(QString file, int oldNumber)
+{
+    ++oldNumber;
+
+    query.prepare("UPDATE song SET nb_played=? WHERE file=?");
+        query.bindValue("1", oldNumber);
+        query.bindValue("2",file);
+    query.exec();
+    return oldNumber;
+}
+
+void dbManager::delPl(QString name)
+{
+    query.prepare("DELETE FROM playlist WHERE name=?");
+         query.bindValue("1", name);
+    query.exec();
+    query.prepare("DELETE FROM asso_song_pl WHERE pl=?");
+         query.bindValue("1", name);
+    query.exec();
+}
+
+QString dbManager::getTitleFromPath(QString path)
+{
+    query.prepare("SELECT title FROM song WHERE file=?");
+        query.bindValue("1",path);
+    query.exec();
+    query.first();
+
+    return query.value(0).toString();
 }
