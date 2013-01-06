@@ -20,6 +20,20 @@ dbManager::dbManager()
     query = db.exec("CREATE TABLE IF NOT EXISTS srcDir(dir string)");
 }
 
+dbManager* dbManager::getInstance(){
+    if (singleton == singleton)
+         {
+           std::cout << "creating singleton." << std::endl;
+           singleton =  new dbManager;
+         }
+       else
+         {
+           std::cout << "singleton already created!" << std::endl;
+         }
+
+       return singleton;
+}
+
 QStringList dbManager::addSong(QString file)
 {
     QStringList song;
@@ -191,3 +205,5 @@ QString dbManager::getTitleFromPath(QString path)
 
     return query.value(0).toString();
 }
+
+dbManager *dbManager::singleton = NULL;

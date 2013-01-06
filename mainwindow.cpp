@@ -2,7 +2,7 @@
 
 MainWindow::MainWindow()
 {
-    db = new dbManager;
+    db = dbManager::getInstance();
 
     media = new Phonon::MediaObject();
     media->setTickInterval(1000);

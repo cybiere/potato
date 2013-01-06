@@ -12,8 +12,11 @@ class dbManager : public QObject
 
     QSqlDatabase db;
     QSqlQuery query;
-public:
+    static dbManager* singleton;
     dbManager();
+public:
+
+    static dbManager* getInstance();
     QStringList getSrcDirs();
     void addSrc(QString);
     void delSrc(QString);
@@ -27,6 +30,7 @@ public:
     void delPl(QString);
     int incrNb_played(QString,int);
     void addSgToPl(QString,QString);
+
 
 public slots :
     QStringList addSong(QString);
