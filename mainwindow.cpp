@@ -24,10 +24,15 @@ MainWindow::MainWindow()
     QMenu *menuLecture = menuBar()->addMenu(tr("Lecture"));
 
         actionPlay = new QAction(QIcon(":/ico/play.png"),tr("Lecture"), this);
+            connect(actionPlay,SIGNAL(triggered()),this,SLOT(play()));
         actionStop = new QAction(QIcon(":/ico/stop.png"),tr("Stop"), this);
+            connect(actionStop,SIGNAL(triggered()),this,SLOT(stop()));
         actionPrev = new QAction(QIcon(":/ico/prev.png"),tr("Précédent"), this);
+            connect(actionPrev,SIGNAL(triggered()),this,SLOT(prev()));
         actionNext = new QAction(QIcon(":/ico/next.png"),tr("Suivant"), this);
-        actionLoop = new QAction(QIcon(":/ico/loop.png"),tr("Répéter"), this); actionLoop->setCheckable(true);
+            connect(actionNext,SIGNAL(triggered()),this,SLOT(next()));
+        actionLoop = new QAction(QIcon(":/ico/loop_off.png"),tr("Répéter chanson"), this);
+            connect(actionNext,SIGNAL(triggered()),this,SLOT(loop()));
 
         menuLecture->addAction(actionPlay);
         menuLecture->addAction(actionStop);
@@ -345,5 +350,44 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
         {
             addToCurrent(item->child(j),0);
         }
+    }
+}
+
+void MainWindow::play()
+{
+
+}
+
+void MainWindow::stop()
+{
+
+}
+
+void MainWindow::prev()
+{
+
+}
+
+void MainWindow::next()
+{
+
+}
+
+void MainWindow::loop()
+{
+    if(actionLoop->text() == tr("Répéter chanson"))
+    {
+        actionLoop->setIcon(QIcon(":/ico/loop_one.png"));
+        actionLoop->setText(tr("Répéter tout"));
+    }
+    else if(actionLoop->text() == tr("Répéter tout"))
+    {
+        actionLoop->setIcon(QIcon(":/ico/loop_all.png"));
+        actionLoop->setText(tr("Pas de répétition"));
+    }
+    else
+    {
+        actionLoop->setIcon(QIcon(":/ico/loop_off.png"));
+        actionLoop->setText(tr("Répéter chanson"));
     }
 }

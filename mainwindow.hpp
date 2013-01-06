@@ -41,6 +41,11 @@ public slots:
     void upTimeTot(qint64);
     void incrTimeCur(qint64);
     void addToCurrent(QTreeWidgetItem*,int);
+    void play();
+    void stop();
+    void prev();
+    void next();
+    void loop();
 };
 
 #endif // MAINWINDOW_HPP

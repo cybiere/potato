@@ -8,6 +8,8 @@
         <file>ico/ref.png</file>
         <file>ico/next.png</file>
         <file>ico/prev.png</file>
-        <file>ico/loop.png</file>
+        <file>ico/loop_all.png</file>
+        <file>ico/loop_off.png</file>
+        <file>ico/loop_one.png</file>
     </qresource>
 </RCC>
