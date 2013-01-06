@@ -3,9 +3,15 @@
 MainWindow::MainWindow()
 {
     db = new dbManager;
-    player = new MediaPlayer;
-    connect(player->media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
-    connect(player->media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
+
+    media = new Phonon::MediaObject();
+    media->setTickInterval(1000);
+    output = new Phonon::AudioOutput(Phonon::MusicCategory);
+    createPath(media,output);
+
+    connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
+    connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
+
     ////////////////////    Menu    ////////////////////
     //Menu Fichier
     QMenu *menuFichier = menuBar()->addMenu(tr("Fichier"));
@@ -53,8 +59,7 @@ MainWindow::MainWindow()
 
         ctrlBar->addWidget(timeCurrent);
 
-        Phonon::SeekSlider *slider = new Phonon::SeekSlider;
-        slider->setMediaObject(player->media);
+        Phonon::SeekSlider *slider = new Phonon::SeekSlider(media);
         ctrlBar->addWidget(slider);
 
         ctrlBar->addWidget(timeTotal);
@@ -63,7 +68,7 @@ MainWindow::MainWindow()
         ctrlBar->addAction(actionLoop);
         ctrlBar->addSeparator();
 
-        Phonon::VolumeSlider *volumeSlider = new Phonon::VolumeSlider(player->output);
+        Phonon::VolumeSlider *volumeSlider = new Phonon::VolumeSlider(output);
             volumeSlider->setMaximumWidth(180);
             ctrlBar->addWidget(volumeSlider);
 

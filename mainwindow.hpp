@@ -2,8 +2,8 @@
 #define MAINWINDOW_HPP
 
 #include <QMainWindow>
+#include <phonon>
 #include "dbmanager.hpp"
-#include "mediaplayer.hpp"
 #include <QtGui>
 
 class MainWindow : public QMainWindow
@@ -25,11 +25,12 @@ class MainWindow : public QMainWindow
     QLabel *timeTotal;
     QLabel *timeCurrent;
     QString convertTime(qint64);
+    Phonon::MediaObject* media;
+    Phonon::AudioOutput* output;
 
 public:
     MainWindow();
     dbManager *db;
-    MediaPlayer *player;
 
 public slots:
     void showOptions();

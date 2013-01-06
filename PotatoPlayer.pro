@@ -14,11 +14,9 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    mediaplayer.cpp \
     dbmanager.cpp
 
 HEADERS  += mainwindow.hpp \
-    mediaplayer.hpp \
     dbmanager.hpp
 
 RESOURCES += \
