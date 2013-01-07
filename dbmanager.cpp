@@ -21,7 +21,7 @@ dbManager::dbManager()
 }
 
 dbManager* dbManager::getInstance(){
-    if (singleton == singleton)
+    if (singleton == NULL)
          {
            std::cout << "creating singleton." << std::endl;
            singleton =  new dbManager;
