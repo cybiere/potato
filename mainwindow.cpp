@@ -1,4 +1,5 @@
 #include "mainwindow.hpp"
+#include "wikiinfo.hpp"
 
 MainWindow::MainWindow()
 {
@@ -90,6 +91,22 @@ MainWindow::MainWindow()
     leftDock->setMaximumWidth(300);
         QVBoxLayout *leftLay = new QVBoxLayout;
         leftLay->setMargin(0);
+        //Recherche
+        searchBlock = new QWidget;
+            QVBoxLayout *searchLay = new QVBoxLayout;
+                searchField = new QLineEdit;
+                connect(searchField,SIGNAL(textChanged(QString)),this,SLOT(changeSearch(QString)));
+
+                searchLay->addWidget(searchField);
+                searchRes = new QTreeWidget;
+                    searchRes->header()->close();
+                    searchRes->setContextMenuPolicy(Qt::CustomContextMenu);
+                    connect(searchRes,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSearch(QPoint)));
+                    connect(searchRes,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addSearchToCurrent(QTreeWidgetItem*,int)));
+                searchLay->addWidget(searchRes);
+            searchBlock->setLayout(searchLay);
+            searchBlock->hide();
+
         //Bibliothèque
         biblio = new QTreeWidget;
             //Pas de headers, pas d'expand au double clic
@@ -163,6 +180,11 @@ MainWindow::MainWindow()
                     srcDirLay->addLayout(srcDirActionLay);
                 optionsLay->addLayout(srcDirLay);
 
+        //bouton pour afficher la recherche
+        QPushButton *search = new QPushButton(tr("Recherche"));
+            search->setFlat(true);
+            connect(search,SIGNAL(clicked()),this,SLOT(showSearch()));
+
         //bouton pour afficher la bibliothèque
         QPushButton *bibl = new QPushButton(tr("Bibliothèque"));
             bibl->setFlat(true);
@@ -183,14 +205,20 @@ MainWindow::MainWindow()
             separator->setFrameShadow(QFrame::Sunken);
         QFrame *separator2 = new QFrame();
             separator2->setFrameShape(QFrame::HLine);
-            separator2->setFrameShadow(QFrame::Sunken);
+        separator2->setFrameShadow(QFrame::Sunken);
+        QFrame *separator3 = new QFrame();
+            separator3->setFrameShape(QFrame::HLine);
+            separator3->setFrameShadow(QFrame::Sunken);
 
+        leftLay->addWidget(search);
+        leftLay->addWidget(searchBlock);
+        leftLay->addWidget(separator);
         leftLay->addWidget(bibl);
         leftLay->addWidget(biblio);
-        leftLay->addWidget(separator);
+        leftLay->addWidget(separator2);
         leftLay->addWidget(playl);
         leftLay->addWidget(plBlock);
-        leftLay->addWidget(separator2);
+        leftLay->addWidget(separator3);
         leftLay->addWidget(opt);
         leftLay->addWidget(options);
     leftDock->setLayout(leftLay);
@@ -201,12 +229,39 @@ MainWindow::MainWindow()
         QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
         current->setHeaderItem(headers);
         current->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(current,SIGNAL(itemClicked(QTreeWidgetItem *,int)),this,SLOT(changeDockInfo(QTreeWidgetItem *,int)));
         connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
         connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
 
     //rightDock
-    //Cover, wikipédia, playlists
-    QTabWidget *rightDock = new QTabWidget;
+    //Cover, wikipédia
+    QWidget *rightDock = new QWidget;
+    rightDock->setMinimumWidth(200);
+    rightDock->setMaximumWidth(300);
+        QVBoxLayout *rightLay = new QVBoxLayout;
+        rightLay->setMargin(0);
+
+
+    QPushButton *cov = new QPushButton(tr("Pochette"));
+        cov->setFlat(true);
+        //connect(cov,SIGNAL(clicked()),this,SLOT(showCover()));
+    QWidget *cover = new QWidget;
+
+    QFrame *separator4 = new QFrame();
+        separator4->setFrameShape(QFrame::HLine);
+        separator4->setFrameShadow(QFrame::Sunken);
+
+    WikiInfo *wikiView = new WikiInfo;
+    connect(this,SIGNAL(changeWikiInfo(QString)),wikiView,SLOT(search(QString)));
+    rightLay->addWidget(wikiView);
+    rightLay->addWidget(separator4);
+    rightLay->addWidget(cov);
+    rightLay->addWidget(cover);
+
+    rightDock->setLayout(rightLay);
+
+
+
 
     main->addWidget(leftDock);
     main->addWidget(current);
@@ -221,6 +276,24 @@ MainWindow::MainWindow()
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
     regenPlaylists();
+}
+
+void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
+{
+   emit changeWikiInfo(item->text(1));
+}
+
+void MainWindow::changeSearch(QString searchTerm)
+{
+    QRegExp rx("*" + searchTerm + "*");
+    rx.setPatternSyntax(QRegExp::Wildcard);
+    for(int i=0;i<searchRes->topLevelItemCount();++i)
+    {
+        if(!(rx.exactMatch(searchRes->topLevelItem(i)->text(0)) || rx.exactMatch(searchRes->topLevelItem(i)->text(1)) || rx.exactMatch(searchRes->topLevelItem(i)->text(2))))
+            searchRes->topLevelItem(i)->setHidden(true);
+        else
+            searchRes->topLevelItem(i)->setHidden(false);
+    }
 }
 
 void MainWindow::contextCurrent(QPoint pos)
@@ -239,6 +312,30 @@ void MainWindow::contextCurrent(QPoint pos)
         playlists->addAction(action);
     }
     context->exec(current->mapToGlobal(pos));
+}
+
+void MainWindow::contextSearch(QPoint pos)
+{
+    if(searchRes->currentItem() == NULL)
+        return;
+    QMenu *context = new QMenu();
+    QAction *titre = new QAction(searchRes->currentItem()->text(0),this);
+    titre->setEnabled(false);
+    QAction *album = new QAction(searchRes->currentItem()->text(1),this);
+    album->setEnabled(false);
+    QAction *artiste = new QAction(searchRes->currentItem()->text(2),this);
+    artiste->setEnabled(false);
+    context->addAction(titre);
+    context->addAction(album);
+    context->addAction(artiste);
+    QMenu *playlists = context->addMenu(tr("Ajouter à une liste de lecture"));
+    for(int i=0;i<plists->topLevelItemCount();++i)
+    {
+        QAction *action = new QAction(plists->topLevelItem(i)->text(0),this);
+            connect(action,SIGNAL(triggered()),this,SLOT(addSearchToPl()));
+        playlists->addAction(action);
+    }
+    context->exec(searchRes->mapToGlobal(pos));
 }
 
 void MainWindow::contextBiblio(QPoint pos)
@@ -290,9 +387,13 @@ void MainWindow::contextPl(QPoint pos)
     context->exec(plists->mapToGlobal(pos));
 }
 
+void MainWindow::addSearchToPl()
+{
+    insertPl(static_cast<QAction *>(sender())->text(),searchRes->currentItem(),0);
+}
+
 void MainWindow::addCurrentToPl()
 {
-
     insertPl(static_cast<QAction *>(sender())->text(),current->currentItem(),0);
 }
 
@@ -319,6 +420,33 @@ void MainWindow::addBiblioToPl()
 
 void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
 {
+    if(item->treeWidget() == searchRes)
+    {
+        QString path;
+        QStringList song = db->getSong(item->text(0),item->text(2),item->text(1));
+
+        path = song.takeAt(6);
+        QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(item->text(0)) << path);
+        bool found = false;
+        QTreeWidgetItem *pl;
+        for(int k=0;k<plists->topLevelItemCount() && !found;++k)
+        {
+            if(plists->topLevelItem(k)->text(0) == playlist)
+            {
+                db->addSgToPl(path,playlist);
+                pl = plists->topLevelItem(k);
+                found = true;
+            }
+        }
+        if(!found)
+        {
+            std::cerr << "erreur : Playlist inexistante." << std::endl;
+            exit(1);
+        }
+        pl->addChild(songItem);
+        return;
+    }
+
 
     //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
     //artiste
@@ -351,7 +479,6 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
             QStringList song = db->getSong(titre,album,artiste);
             path = song.takeAt(6);
         }
-        db->addSgToPl(path,playlist);
         QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(titre) << path);
         bool found = false;
         QTreeWidgetItem *pl;
@@ -359,6 +486,7 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
         {
             if(plists->topLevelItem(k)->text(0) == playlist)
             {
+                db->addSgToPl(path,playlist);
                 pl = plists->topLevelItem(k);
                 found = true;
             }
@@ -515,11 +643,23 @@ void MainWindow::insertSong(QStringList song)
     {
         albumItem->addChild(new QTreeWidgetItem(QStringList(title)));
     }
+    searchRes->addTopLevelItem(new QTreeWidgetItem(QStringList(title) << artist << album));
+    searchRes->sortItems(0,Qt::AscendingOrder);
+}
+
+void MainWindow::showSearch()
+{
+    //masque la bibliothèque et affiche les options
+    searchBlock->show();
+    biblio->hide();
+    plBlock->hide();
+    options->hide();
 }
 
 void MainWindow::showOptions()
 {
     //masque la bibliothèque et affiche les options
+    searchBlock->hide();
     biblio->hide();
     plBlock->hide();
     options->show();
@@ -528,6 +668,7 @@ void MainWindow::showOptions()
 void MainWindow::showBiblio()
 {
     //affiche la bibliothèque et masque les options
+    searchBlock->hide();
     options->hide();
     plBlock->hide();
     biblio->show();
@@ -536,6 +677,7 @@ void MainWindow::showBiblio()
 void MainWindow::showPlists()
 {
     //affiche la bibliothèque et masque les options
+    searchBlock->hide();
     options->hide();
     plBlock->show();
     biblio->hide();
@@ -588,6 +730,11 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
             addToCurrent(item->child(j),0);
         }
     }
+}
+
+void MainWindow::addSearchToCurrent(QTreeWidgetItem * item, int)
+{
+    current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(0),item->text(2),item->text(1))));
 }
 
 void MainWindow::play()

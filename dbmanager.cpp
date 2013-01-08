@@ -22,16 +22,8 @@ dbManager::dbManager()
 
 dbManager* dbManager::getInstance(){
     if (singleton == singleton)
-         {
-           std::cout << "creating singleton." << std::endl;
-           singleton =  new dbManager;
-         }
-       else
-         {
-           std::cout << "singleton already created!" << std::endl;
-         }
-
-       return singleton;
+        singleton =  new dbManager;
+    return singleton;
 }
 
 QStringList dbManager::addSong(QString file)

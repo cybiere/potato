@@ -12,10 +12,13 @@ class MainWindow : public QMainWindow
 
     QWidget *options;
     QWidget *plBlock;
+    QWidget *searchBlock;
+    QLineEdit *searchField;
     QTreeWidget *biblio;
     QListWidget *srcDirList;
     QTreeWidget *current;
     QTreeWidget *plists;
+    QTreeWidget *searchRes;
     void scanDir(QString);
     void insertSong(QStringList);
     void regenBiblio();
@@ -43,6 +46,7 @@ public slots:
     void showOptions();
     void showBiblio();
     void showPlists();
+    void showSearch();
     void addSourceDir();
     void delSourceDir();
     void addPl();
@@ -51,6 +55,7 @@ public slots:
     void upTimeTot(qint64);
     void incrTimeCur(qint64);
     void addToCurrent(QTreeWidgetItem*,int);
+    void addSearchToCurrent(QTreeWidgetItem*,int);
     void play();
     void stop();
     void prev();
@@ -59,13 +64,20 @@ public slots:
     void loop();
     void selectedSong(QTreeWidgetItem*,int);
     void contextCurrent(QPoint);
+    void contextSearch(QPoint);
     void contextBiblio(QPoint);
     void contextSrc(QPoint);
     void contextPl(QPoint);
     void playSelected();
     void addCurrentToPl();
+    void addSearchToPl();
     void addBiblioToPl();
     void insertPl(QString,QTreeWidgetItem *,int);
+    void changeDockInfo(QTreeWidgetItem *,int);
+    void changeSearch(QString);
+
+signals :
+    void changeWikiInfo(QString);
 
 };
 

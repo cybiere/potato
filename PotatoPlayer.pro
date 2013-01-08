@@ -14,10 +14,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    dbmanager.cpp
+    dbmanager.cpp \
+    wikiinfo.cpp
 
 HEADERS  += mainwindow.hpp \
-    dbmanager.hpp
+    dbmanager.hpp \
+    wikiinfo.hpp
 
 RESOURCES += \
     ressources.qrc
