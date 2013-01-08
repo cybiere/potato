@@ -1,5 +1,6 @@
 #include "mainwindow.hpp"
 #include "wikiinfo.hpp"
+#include <fstream>
 
 MainWindow::MainWindow()
 {
@@ -13,6 +14,7 @@ MainWindow::MainWindow()
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
     connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
     connect(media,SIGNAL(finished()),this,SLOT(songEnd()));
+    connect(qApp,SIGNAL(aboutToQuit()),this,SLOT(saveCurrent()));
 
     playing = NULL;
 
@@ -276,6 +278,7 @@ MainWindow::MainWindow()
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
     regenPlaylists();
+    loadCurrent();
 }
 
 void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
@@ -913,4 +916,25 @@ void MainWindow::delPl()
     //suppression de l'élément courant dans la base de données puis dans l'interface
     db->delPl(plists->currentItem()->text(0));
     plists->takeTopLevelItem(plists->indexOfTopLevelItem(plists->currentItem()));
+}
+
+void MainWindow::saveCurrent()
+{
+    std::ofstream fichier("PotatoSvg");
+    for(int i=0;i<current->topLevelItemCount();++i)
+    {
+        fichier << current->topLevelItem(i)->text(6).toStdString() << std::endl;
+    }
+    fichier.close();
+}
+
+void MainWindow::loadCurrent()
+{
+    std::ifstream fichier("PotatoSvg");
+    std::string chaine;
+    while(std::getline(fichier,chaine))
+    {
+        current->addTopLevelItem(new QTreeWidgetItem(db->getSong(QString::fromStdString(chaine))));
+    }
+    fichier.close();
 }

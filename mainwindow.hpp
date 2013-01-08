@@ -75,6 +75,9 @@ public slots:
     void insertPl(QString,QTreeWidgetItem *,int);
     void changeDockInfo(QTreeWidgetItem *,int);
     void changeSearch(QString);
+    void saveCurrent();
+    void loadCurrent();
+
 
 signals :
     void changeWikiInfo(QString);
