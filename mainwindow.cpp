@@ -5,7 +5,7 @@
 MainWindow::MainWindow()
 {
     db = dbManager::getInstance();
-
+    thr = new Thread;
     media = new Phonon::MediaObject();
     media->setTickInterval(1000);
     output = new Phonon::AudioOutput(Phonon::MusicCategory);
@@ -227,13 +227,25 @@ MainWindow::MainWindow()
 
     //mainZone
     //QTreeWidget des chansons de la liste "lecture en cours"
+    QWidget *centerDock = new QWidget;
+    QVBoxLayout *centerlayout = new QVBoxLayout;
+        centerlayout->setMargin(0);
+
     current = new QTreeWidget;
         QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
         current->setHeaderItem(headers);
         current->setContextMenuPolicy(Qt::CustomContextMenu);
+
         connect(current,SIGNAL(itemClicked(QTreeWidgetItem *,int)),this,SLOT(changeDockInfo(QTreeWidgetItem *,int)));
         connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
         connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
+
+    proglabel = new QLabel;
+        proglabel->setAlignment(Qt::AlignHCenter);
+        proglabel->setText("Bibliothèque à jour");
+        centerlayout->addWidget(current);
+        centerlayout->addWidget(proglabel);
+    centerDock->setLayout(centerlayout);
 
     //rightDock
     //Cover, wikipédia
@@ -266,7 +278,7 @@ MainWindow::MainWindow()
 
 
     main->addWidget(leftDock);
-    main->addWidget(current);
+    main->addWidget(centerDock);
     main->addWidget(rightDock);
 
     //les différentes parties ne peuvent pas être réduites jusqu'à disparaître
@@ -542,32 +554,9 @@ void MainWindow::refresh()
 
 void MainWindow::scanDir(QString path)
 {
-    QDir dir(path);
-    QStringList nameFilters;
-    //Génère le filtre des noms pour considérer uniquement les fichiers d'une certaine extension
-    nameFilters << "*.mp3" << "*.ogg" << "*.wav" << ".m4a";
-    dir.setNameFilters(nameFilters);
-    //Génère le filtre pour afficher tous les dossiers sauf . et ..
-    dir.setFilter(QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot);
-    int nbItem = dir.count();
-
-    //RegEx très (trop?) simple pour différencier dossiers et fichiers (de l'extension donnée) -> doit y avoir meilleure méthode
-    QRegExp rx("*.*");
-    rx.setPatternSyntax(QRegExp::Wildcard);
-
-    for(int i=0;i<nbItem;++i)
-    {
-        if(rx.exactMatch(dir[i]))
-        {
-            //Traitement pour les fichiers
-            insertSong(db->addSong(path + "/" + dir[i]));
-        }
-        else
-        {
-            //Scan des sous-dossiers.
-            scanDir(path + "/" + dir[i]);
-        }
-    }
+    proglabel->setText("Importation en cours...");
+    thr->setParam(biblio,path);
+    thr->start();
 }
 
 void MainWindow::regenBiblio()

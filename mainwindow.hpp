@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <phonon>
 #include "dbmanager.hpp"
+#include "thread.hpp"
 #include <QtGui>
 
 class MainWindow : public QMainWindow
@@ -21,7 +22,7 @@ class MainWindow : public QMainWindow
     QTreeWidget *searchRes;
     void scanDir(QString);
     void insertSong(QStringList);
-    void regenBiblio();
+
     void regenPlaylists();
     QAction *actionPlay;
     QAction *actionStop;
@@ -30,6 +31,7 @@ class MainWindow : public QMainWindow
     QAction *actionLoop;
     QLabel *timeTotal;
     QLabel *timeCurrent;
+    QLabel *proglabel;
     QString convertTime(qint64);
     Phonon::MediaObject* media;
     Phonon::AudioOutput* output;
@@ -37,6 +39,7 @@ class MainWindow : public QMainWindow
     QTreeWidgetItem *playing;
     void bold();
     void clear();
+    Thread* thr;
 
 public:
     MainWindow();
@@ -77,6 +80,7 @@ public slots:
     void changeSearch(QString);
     void saveCurrent();
     void loadCurrent();
+    void regenBiblio();
 
 
 signals :
