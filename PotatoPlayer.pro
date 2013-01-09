@@ -25,3 +25,6 @@ HEADERS  += mainwindow.hpp \
 
 RESOURCES += \
     ressources.qrc
+
+TRANSLATIONS += \
+    potato_en.ts
