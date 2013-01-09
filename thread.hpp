@@ -16,11 +16,8 @@ class Thread : public QThread
 
     private :
             dbManager*db;
-            QString path;
-            QMutex *mut;
-            QTreeWidget *biblio;
+            QStringList waitList;
             struct timespec req;
-             void insertSong(QStringList song);
 
     public:
             Thread();
@@ -28,12 +25,12 @@ class Thread : public QThread
 
     public slots :
             void run();
-            void link(QString path);
-            void setParam(QTreeWidget*,QString);
+            void link();
+            void setParam(QStringList);
 
     signals :
-            void complete(QString);
             void refresh();
+            void finish(QString);
 };
 
 #endif // MYTHREAD_HPP

@@ -11,8 +11,9 @@ MainWindow::MainWindow()
     output = new Phonon::AudioOutput(Phonon::MusicCategory);
     createPath(media,output);
 
-    connect(thr,SIGNAL(complete(QString)),this,SLOT(changeStatus(QString)));
+
     connect(thr,SIGNAL(refresh()),this,SLOT(regenBiblio()));
+    connect(thr,SIGNAL(finish(QString)),this,SLOT(changeStatus(QString)));
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
     connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
     connect(media,SIGNAL(finished()),this,SLOT(songEnd()));
@@ -535,6 +536,8 @@ void MainWindow::addSourceDir()
 {
     //QFiledialog pour choisir le dossier en question, puis ajout à la base de données et à l'interface
     QString dir = QFileDialog::getExistingDirectory(this,tr("Choisir un dossier"), getenv("HOME"));
+    if(dir == "")
+        return;
     db->addSrc(dir);
     srcDirList->addItem(dir);
 }
@@ -550,19 +553,16 @@ void MainWindow::delSourceDir()
 
 void MainWindow::refresh()
 {
+    QStringList waitList;
     //scan récursif du dossier pour chaque entrée dans la liste des dossiers sources
     int nbItems = srcDirList->count();
+
+    statusBar->showMessage(tr("Importation en cours..."));
     for(int i=0;i<nbItems;++i)
     {
-        scanDir(srcDirList->item(i)->text());
+        waitList << srcDirList->item(i)->text();
     }
-    biblio->sortItems(0,Qt::AscendingOrder);
-}
-
-void MainWindow::scanDir(QString path)
-{
-    statusBar->showMessage(tr("Importation en cours..."));
-    thr->setParam(biblio,path);
+    thr->setParam(waitList);
     thr->start();
 }
 
@@ -573,6 +573,7 @@ void MainWindow::regenBiblio()
     {
         insertSong(songs->takeFirst());
     }
+    biblio->sortItems(0,Qt::AscendingOrder);
 }
 
 void MainWindow::regenPlaylists()
@@ -843,15 +844,16 @@ void MainWindow::prev()
 void MainWindow::songEnd()
 {
     db->incrNb_played(playing->text(6),playing->text(4).toInt());
-    playing->setText(4,QString::number(db->incrNb_played(playing->text(6),playing->text(4).toInt())));
-    if(loopState == 1)
+    if(current->indexOfTopLevelItem(playing) != -1)
     {
-        media->play();
+        playing->setText(4,QString::number(db->incrNb_played(playing->text(6),playing->text(4).toInt())));
+        if(loopState == 1)
+            media->play();
+        else
+            next();
     }
     else
-    {
-        next();
-    }
+        stop();
 }
 
 void MainWindow::next()
@@ -940,9 +942,14 @@ void MainWindow::loadCurrent()
 {
     std::ifstream fichier("PotatoSvg");
     std::string chaine;
+    QStringList liste;
     while(std::getline(fichier,chaine))
     {
-        current->addTopLevelItem(new QTreeWidgetItem(db->getSong(QString::fromStdString(chaine))));
+        liste = db->getSong(QString::fromStdString(chaine));
+        if(liste.at(0) != "")
+        {
+            current->addTopLevelItem(new QTreeWidgetItem(liste));
+        }
     }
     fichier.close();
 }

@@ -47,8 +47,8 @@ QStringList dbManager::addSong(QString file)
         TagLib::Tag *tag = f.tag();
 
         artiste = QString::fromUtf8(tag->artist().toCString(true));
-        album = QString::fromUtf8(tag->title().toCString(true));
-        titre = QString::fromUtf8(tag->album().toCString(true));
+        titre = QString::fromUtf8(tag->title().toCString(true));
+        album = QString::fromUtf8(tag->album().toCString(true));
         genre = QString::fromUtf8(tag->genre().toCString(true));
 
         query.prepare("INSERT INTO song (file, artist, title, album, genre, nb_played, rating) VALUES (?, ?, ?, ?, ?, 0, 0)");
@@ -69,7 +69,7 @@ QStringList dbManager::addSong(QString file)
     }
 
 
-    song << titre << artiste<< album;
+    song << titre << album << artiste;
     return song;
 }
 
@@ -102,13 +102,22 @@ void dbManager::delSrc(QString dir)
 
 QList<QStringList> *dbManager::getBiblio()
 {
+    QString artiste;
+    QString album;
+    QString titre;
     QList<QStringList> *songs = new QList<QStringList>;
     query.prepare("SELECT artist,title,album FROM song");
     query.exec();
     while(query.next())
     {
-        QStringList song(query.value(1).toString());
-        song << query.value(0).toString() << query.value(2).toString();
+        if((titre = query.value(1).toString()) == "")
+            titre = tr("Inconnu");
+        if((artiste = query.value(0).toString()) == "")
+            artiste = tr("Inconnu");
+        if((album = query.value(2).toString()) == "")
+            album = tr("Inconnu");
+        QStringList song(titre);
+        song << artiste << album;
         songs->append(song);
     }
 

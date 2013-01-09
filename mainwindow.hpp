@@ -40,6 +40,7 @@ class MainWindow : public QMainWindow
     void clear();
     Thread* thr;
 
+
 public:
     MainWindow();
     dbManager *db;
