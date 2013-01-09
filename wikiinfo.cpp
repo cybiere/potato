@@ -13,10 +13,7 @@ WikiInfo::WikiInfo(void)
     load->hide();
 
     setLayout(vertLay);
-    /*
-    Gérer les size policy
-    setSizePolicy(QSizePolicy::Minimum);
-    */
+
     page->load(QUrl("http://fr.m.wikipedia.org"));
 
     connect(page, SIGNAL(loadStarted()), this, SLOT(startLoad()));
@@ -29,7 +26,9 @@ WikiInfo::WikiInfo(void)
  */
 void WikiInfo::search(QString artist)
 {
+    //remplacer des espaces par le %20
     artist.replace(QChar(' '),"%20");
+    //on verifie que l'artiste est pas le même que celui de la page déjà chargée, inutile de recharger pour rien.
     if(artist != current)
     {
         current = artist;
@@ -37,7 +36,7 @@ void WikiInfo::search(QString artist)
     }
 }
 
-/** @brief Slot pour afficher la barre de chargement */
+/** @brief Slot pour afficher la barre de chargement au début de celui ci*/
 void WikiInfo::startLoad()
 {
     load->show();
@@ -51,7 +50,7 @@ void WikiInfo::loading(int val)
     load->setValue(val);
 }
 
-/** @brief Slot pour cacher la barre de chargement */
+/** @brief Slot pour cacher la barre de chargement à la fin de celui ci */
 void WikiInfo::endLoad(bool)
 {
     load->hide();
