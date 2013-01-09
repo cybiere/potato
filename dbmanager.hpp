@@ -5,6 +5,7 @@
 #include <taglib/fileref.h>
 #include <QtSql>
 
+/** @class Classe de gestion de la BDD */
 
 class dbManager : public QObject
 {

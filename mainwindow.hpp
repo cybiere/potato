@@ -7,6 +7,8 @@
 #include "thread.hpp"
 #include <QtGui>
 
+/** @class Classe de gestion de la MainWindow */
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

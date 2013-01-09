@@ -10,6 +10,8 @@
 
 class MusicPlayer;
 
+/** @class Classe de gestion du thread pour le parcours des répertoires et l'ajout dans la bdd. */
+
 class Thread : public QThread
 {
     Q_OBJECT

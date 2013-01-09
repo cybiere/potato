@@ -4,6 +4,8 @@
 #include <QtWebKit>
 #include <QtGui>
 
+/** @class Classe de gestion du bloc "Wiki" permettant d'afficher les informations sur l'artiste de la chanson en cours */
+
 class WikiInfo : public QWidget
 {
     Q_OBJECT
