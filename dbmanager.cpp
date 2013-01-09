@@ -61,6 +61,9 @@ QStringList dbManager::addSong(QString file)
         titre = QString::fromUtf8(tag->title().toCString(true));
         album = QString::fromUtf8(tag->album().toCString(true));
         genre = QString::fromUtf8(tag->genre().toCString(true));
+        if(artiste == "") artiste = tr("Inconnu");
+        if(titre == "") titre = tr("Inconnu");
+        if(album == "") album = tr("Inconnu");
 
         query.prepare("INSERT INTO song (file, artist, title, album, genre, nb_played, rating) VALUES (?, ?, ?, ?, ?, 0, 0)");
              query.bindValue("1", file);
