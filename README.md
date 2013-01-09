@@ -1,4 +1,4 @@
-potato
+PotatoPlayer
 ======
 
 PotatoPlayer - Qt music player using phonon &amp; taglib
