@@ -1,22 +1,28 @@
 #include "thread.hpp"
 
+/** @brief Constructeur du thread */
 Thread::Thread()
 {
     db =  dbManager::getInstance();
     req = {0};
 }
 
+/** @brief Méthode pour récupérer la liste des répertoires à scanner
+ * @param wait : liste des répertoires à scanner
+ */
 void Thread::setParam(QStringList wait)
 {
     waitList = wait;
 }
 
+/** @brief Code exécuté par le thread */
 void Thread::run()
 {
     link();
     exec();
 }
 
+/** @brief Méthode pour scanner les répertoires et sous-répertoires en ajoutant les musiques dans la bdd */
 void Thread::link()
 {
     QString path;

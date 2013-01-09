@@ -2,6 +2,7 @@
 #include "wikiinfo.hpp"
 #include <fstream>
 
+/** @brief Constructeur d'une MainWindow */
 MainWindow::MainWindow()
 {
     db = dbManager::getInstance();
@@ -11,12 +12,16 @@ MainWindow::MainWindow()
     output = new Phonon::AudioOutput(Phonon::MusicCategory);
     createPath(media,output);
 
-
+    ///////////////     Connect Thread      ////////////
     connect(thr,SIGNAL(refresh()),this,SLOT(regenBiblio()));
     connect(thr,SIGNAL(finish(QString)),this,SLOT(changeStatus(QString)));
+
+    ///////////////     Connect media      ////////////
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
     connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
     connect(media,SIGNAL(finished()),this,SLOT(songEnd()));
+
+    ///////////////      Connect App      ////////////
     connect(qApp,SIGNAL(aboutToQuit()),this,SLOT(saveCurrent()));
 
     playing = NULL;
@@ -99,10 +104,6 @@ MainWindow::MainWindow()
 
     ////////////////////    Main    ////////////////////
     QSplitter *main = new QSplitter;
-    statusBar = new QStatusBar(this);
-        statusBar->setSizeGripEnabled(false);
-        statusBar->showMessage(tr("Bibliothèque à jour"));
-    setStatusBar(statusBar);
 
     //leftDock
     QWidget *leftDock = new QWidget;
@@ -293,6 +294,12 @@ MainWindow::MainWindow()
     main->setCollapsible(2,false);
     setCentralWidget(main);
 
+    /////////////////    Barre de statut    //////////////////
+    statusBar = new QStatusBar(this);
+        statusBar->setSizeGripEnabled(false);
+        statusBar->showMessage(tr("Bibliothèque à jour"));
+    setStatusBar(statusBar);
+
 
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
@@ -300,11 +307,17 @@ MainWindow::MainWindow()
     loadCurrent();
 }
 
+/** @brief Méthode pour changer la page du block Wiki
+ * @param item : page à charger.
+ */
 void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
 {
    emit changeWikiInfo(item->text(1));
 }
 
+/** @brief Méthode pour la recherche dans la bibliothèque
+ * @param searchTerm : terme pour la recherche
+ */
 void MainWindow::changeSearch(QString searchTerm)
 {
     QRegExp rx("*" + searchTerm + "*");
@@ -319,6 +332,9 @@ void MainWindow::changeSearch(QString searchTerm)
     }
 }
 
+/** @brief Méthode pour gérer le menu déroulant dans le bloc current
+ * @param pos : position de l'object cliqué
+ */
 void MainWindow::contextCurrent(QPoint pos)
 {
     if(current->currentItem() == NULL)
@@ -337,6 +353,9 @@ void MainWindow::contextCurrent(QPoint pos)
     context->exec(current->mapToGlobal(pos));
 }
 
+/** @brief Méthode pour gérer le menu déroulant dans le bloc Rechercher
+ * @param pos : position de l'object cliqué
+ */
 void MainWindow::contextSearch(QPoint pos)
 {
     if(searchRes->currentItem() == NULL)
@@ -361,6 +380,9 @@ void MainWindow::contextSearch(QPoint pos)
     context->exec(searchRes->mapToGlobal(pos));
 }
 
+/** @brief Méthode pour gérer le menu déroulant dans le bloc Bibliothèque
+ * @param pos : position de l'object cliqué
+ */
 void MainWindow::contextBiblio(QPoint pos)
 {
     QMenu *context = new QMenu();
@@ -379,6 +401,9 @@ void MainWindow::contextBiblio(QPoint pos)
     context->exec(biblio->mapToGlobal(pos));
 }
 
+/** @brief Méthode pour gérer le menu déroulant dans le bloc Bibliothèque
+ * @param pos : position de l'object cliqué
+ */
 void MainWindow::contextSrc(QPoint pos)
 {
     QMenu *context = new QMenu();
@@ -396,6 +421,9 @@ void MainWindow::contextSrc(QPoint pos)
     context->exec(srcDirList->mapToGlobal(pos));
 }
 
+/** @brief Méthode pour gérer le menu déroulant du bloc Listes de Lecture
+ * @param pos : position de l'object cliqué
+ */
 void MainWindow::contextPl(QPoint pos)
 {
     QMenu *context = new QMenu();
@@ -410,16 +438,19 @@ void MainWindow::contextPl(QPoint pos)
     context->exec(plists->mapToGlobal(pos));
 }
 
+/** @brief Méthode pour ajouter un résultat de la recherche dans la playlist courante*/
 void MainWindow::addSearchToPl()
 {
-    insertPl(static_cast<QAction *>(sender())->text(),searchRes->currentItem(),0);
+    (static_cast<QAction *>(sender())->text(),searchRes->currentItem(),0);
 }
 
+/** @brief Méthode pour ajouter le contenu de la playlist courante dans une playlist */
 void MainWindow::addCurrentToPl()
 {
     insertPl(static_cast<QAction *>(sender())->text(),current->currentItem(),0);
 }
 
+/** @brief Méthode pour ajouter des musiques de la bibliothèque à la playlist courante */
 void MainWindow::addBiblioToPl()
 {
     int niveau;
@@ -441,6 +472,11 @@ void MainWindow::addBiblioToPl()
     insertPl(static_cast<QAction *>(sender())->text(),item,niveau);
 }
 
+/** @brief Méthode pour insérer un item dans une playlist
+ * @param playlist : playlist dans laquelle on insère.
+ * @param item : item à intéresser
+ * @param niveau : niveau
+ */
 void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
 {
     if(item->treeWidget() == searchRes)
@@ -523,6 +559,7 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
     }
 }
 
+/** @brief Slot pour ajouter la musique à la playlist courante et le jouer */
 void MainWindow::playSelected()
 {
     if(biblio->currentItem() != NULL)
@@ -532,6 +569,7 @@ void MainWindow::playSelected()
     }
 }
 
+/** @brief Slot pour ajouter un répertoire aux répertoires à scanner */
 void MainWindow::addSourceDir()
 {
     //QFiledialog pour choisir le dossier en question, puis ajout à la base de données et à l'interface
@@ -542,6 +580,7 @@ void MainWindow::addSourceDir()
     srcDirList->addItem(dir);
 }
 
+/** @brief Slot pour supprimer un répertoire dan la list des répertoires à scanner */
 void MainWindow::delSourceDir()
 {
     if(srcDirList->currentItem() == NULL)
@@ -551,6 +590,7 @@ void MainWindow::delSourceDir()
     srcDirList->takeItem(srcDirList->currentRow());
 }
 
+/** @brief Slot pour lister les répertoires à scanner et envoyer la liste au thread pour l'import */
 void MainWindow::refresh()
 {
     QStringList waitList;
@@ -566,6 +606,7 @@ void MainWindow::refresh()
     thr->start();
 }
 
+/** @brief Slot pour regénérer la bibliothèque */
 void MainWindow::regenBiblio()
 {
     QList<QStringList> *songs = db->getBiblio();
@@ -576,6 +617,7 @@ void MainWindow::regenBiblio()
     biblio->sortItems(0,Qt::AscendingOrder);
 }
 
+/** @brief Slot pour regénéner les playlist */
 void MainWindow::regenPlaylists()
 {
     QStringList *pl = db->getPlaylists();
@@ -593,6 +635,7 @@ void MainWindow::regenPlaylists()
     }
 }
 
+/** @brief Méthode pour insérer une liste de musiques dans la bibliothèque */
 void MainWindow::insertSong(QStringList song)
 {
     QString title = song.takeFirst();
@@ -659,53 +702,63 @@ void MainWindow::insertSong(QStringList song)
     }
 }
 
+/** @brief Slopt pour afficher le bloc de recherche et cacher les autres*/
 void MainWindow::showSearch()
 {
-    //masque la bibliothèque et affiche les options
     searchBlock->show();
     biblio->hide();
     plBlock->hide();
     options->hide();
 }
 
+/** @brief Slopt pour afficher le bloc des options et cacher les autres*/
 void MainWindow::showOptions()
 {
-    //masque la bibliothèque et affiche les options
     searchBlock->hide();
     biblio->hide();
     plBlock->hide();
     options->show();
 }
 
+/** @brief Slopt pour afficher le bloc de la bibliothèque et cacher les autres*/
 void MainWindow::showBiblio()
 {
-    //affiche la bibliothèque et masque les options
     searchBlock->hide();
     options->hide();
     plBlock->hide();
     biblio->show();
 }
 
+/** @brief Slopt pour afficher le bloc des playlists et cacher les autres*/
 void MainWindow::showPlists()
 {
-    //affiche la bibliothèque et masque les options
     searchBlock->hide();
     options->hide();
     plBlock->show();
     biblio->hide();
 }
 
+/** @brief Slot pour afficher le temps total de la chanson en lecture et initialiser le temps de lecture
+ * @param time : temps total
+ */
 void MainWindow::upTimeTot(qint64 time)
 {
     timeTotal->setText(convertTime(time));
     timeCurrent->setText(convertTime(0));
 }
 
+/** @brief Slot pour incrémenter temps de lecture
+ * @param time : incrémentation
+ */
 void MainWindow::incrTimeCur(qint64 time)
 {
     timeCurrent->setText(convertTime(time));
 }
 
+/** @brief Méthode pour convertir le temps au format "HMS"
+ * @param time : temps à convertir
+ * @return temps converti
+ */
 QString MainWindow::convertTime(qint64 time)
 {
     time = time/1000;
@@ -715,6 +768,9 @@ QString MainWindow::convertTime(qint64 time)
     return converted;
 }
 
+/** @brief Slot pour ajouter une playlist à la playlist courante
+ * @param item : item double cliqué
+ */
 void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
 {
     //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
@@ -744,11 +800,15 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
     }
 }
 
+/** @brief Slot pour ajouter un résultat de la recherche à la playlist courante
+ * @param item : item double cliqué
+ */
 void MainWindow::addSearchToCurrent(QTreeWidgetItem * item, int)
 {
     current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(0),item->text(2),item->text(1))));
 }
 
+/** @brief Slot pour lire une musique */
 void MainWindow::play()
 {
     if(media->state() == Phonon::PlayingState)
@@ -779,6 +839,7 @@ void MainWindow::play()
     }
 }
 
+/** @brief Slot pour arreter la lecture d'une musique */
 void MainWindow::stop()
 {
     setWindowTitle("PotatoPlayer");
@@ -788,6 +849,7 @@ void MainWindow::stop()
     clear();
 }
 
+/** @brief Slot pour enlever le gras sur les différents champs de la musique lue */
 void MainWindow::clear()
 {
     if(playing == NULL)
@@ -803,6 +865,7 @@ void MainWindow::clear()
     playing->setFont(6,font);
 }
 
+/** @brief Slot pour mettre en gras les différents champs de la musique lue */
 void MainWindow::bold()
 {
     if(playing == NULL)
@@ -818,6 +881,7 @@ void MainWindow::bold()
     playing->setFont(6,font);
 }
 
+/** @brief Slot pour lire la musique précédente */
 void MainWindow::prev()
 {
     if(current->topLevelItemCount() == 0)
@@ -826,7 +890,7 @@ void MainWindow::prev()
     stop();
     if(playing != current->topLevelItem(0))
     {
-        clear();
+        x();
         playing = current->itemAbove(playing);
         bold();
     }
@@ -841,6 +905,7 @@ void MainWindow::prev()
     play();
 }
 
+/** @brief quand la musique se termine */
 void MainWindow::songEnd()
 {
     db->incrNb_played(playing->text(6),playing->text(4).toInt());
@@ -856,6 +921,7 @@ void MainWindow::songEnd()
         stop();
 }
 
+/** @brief Slot pour lire la musique suivante */
 void MainWindow::next()
 {
     if(current->topLevelItemCount() == 0)
@@ -880,6 +946,7 @@ void MainWindow::next()
     }
 }
 
+/** @brief Slot pour lire une musique en boucle */
 void MainWindow::loop()
 {
     if(loopState == 0)
@@ -902,6 +969,7 @@ void MainWindow::loop()
     }
 }
 
+/** @brief Slot quand on double clique sur un item pour le sélectionner */
 void MainWindow::selectedSong(QTreeWidgetItem *item, int)
 {
     stop();
@@ -911,6 +979,7 @@ void MainWindow::selectedSong(QTreeWidgetItem *item, int)
     play();
 }
 
+/** @brief Slot pour ajouter une playlist */
 void MainWindow::addPl()
 {
     QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
@@ -919,6 +988,7 @@ void MainWindow::addPl()
             plists->addTopLevelItem(new QTreeWidgetItem(QStringList(plName)));
 }
 
+/** @brief Slot pour supprimer une playlist */
 void MainWindow::delPl()
 {
     if(plists->currentItem() == 0)
@@ -928,6 +998,7 @@ void MainWindow::delPl()
     plists->takeTopLevelItem(plists->indexOfTopLevelItem(plists->currentItem()));
 }
 
+/** @brief Slot pour sauvegarder la playlist courante */
 void MainWindow::saveCurrent()
 {
     std::ofstream fichier("PotatoSvg");
@@ -938,6 +1009,7 @@ void MainWindow::saveCurrent()
     fichier.close();
 }
 
+/** @brief Slot pour charger la playlist courante. */
 void MainWindow::loadCurrent()
 {
     std::ifstream fichier("PotatoSvg");
@@ -954,16 +1026,19 @@ void MainWindow::loadCurrent()
     fichier.close();
 }
 
+/** @brief Slot pour changer le message de la statusBar */
 void MainWindow::changeStatus(QString str){
     statusBar->showMessage(str);
 }
 
+/** @brief Slot pour effacer la playlist courante */
 void MainWindow::clearCurrent()
 {
     while(current->topLevelItemCount() != 0)
         current->takeTopLevelItem(0);
 }
 
+/** @brief Slot pour enregistrer la playlist courante dans une playlist */
 void MainWindow::currentToPl()
 {
     QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");

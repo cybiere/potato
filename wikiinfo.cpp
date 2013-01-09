@@ -1,5 +1,6 @@
 #include "wikiinfo.hpp"
 
+/** @brief Constructeur du WikiInfo */
 WikiInfo::WikiInfo(void)
 {
     current = "";
@@ -23,6 +24,9 @@ WikiInfo::WikiInfo(void)
     connect(page, SIGNAL(loadFinished(bool)), this, SLOT(endLoad(bool)));
 }
 
+/** @brief Slot pour charger la page correspondant à l'artiste
+ * @param artist : artiste de la musique en lecture
+ */
 void WikiInfo::search(QString artist)
 {
     artist.replace(QChar(' '),"%20");
@@ -33,16 +37,21 @@ void WikiInfo::search(QString artist)
     }
 }
 
+/** @brief Slot pour afficher la barre de chargement */
 void WikiInfo::startLoad()
 {
     load->show();
 }
 
+/** @brief Slot pour incrémenter la barre de chargement
+ * @param val : valeur du chargement
+ */
 void WikiInfo::loading(int val)
 {
     load->setValue(val);
 }
 
+/** @brief Slot pour cacher la barre de chargement */
 void WikiInfo::endLoad(bool)
 {
     load->hide();
