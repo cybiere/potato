@@ -12,5 +12,7 @@
         <file>ico/loop_off.png</file>
         <file>ico/loop_one.png</file>
         <file>ico/loop.png</file>
+        <file>ico/clearCur.png</file>
+        <file>ico/saveCur.png</file>
     </qresource>
 </RCC>

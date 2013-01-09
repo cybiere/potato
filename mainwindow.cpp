@@ -11,6 +11,8 @@ MainWindow::MainWindow()
     output = new Phonon::AudioOutput(Phonon::MusicCategory);
     createPath(media,output);
 
+    connect(thr,SIGNAL(complete(QString)),this,SLOT(changeStatus(QString)));
+    connect(thr,SIGNAL(refresh()),this,SLOT(regenBiblio()));
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
     connect(media,SIGNAL(tick(qint64)),this,SLOT(incrTimeCur(qint64)));
     connect(media,SIGNAL(finished()),this,SLOT(songEnd()));
@@ -22,6 +24,14 @@ MainWindow::MainWindow()
     //Menu Fichier
     QMenu *menuFichier = menuBar()->addMenu(tr("Fichier"));
 
+
+        QAction *actionClearCur = new QAction(QIcon(":/ico/clearCur.png"),tr("Vider la lecture en cours"),this);
+            connect(actionClearCur,SIGNAL(triggered()),this,SLOT(clearCurrent()));
+        menuFichier->addAction(actionClearCur);
+        QAction *actionSaveCur = new QAction(QIcon(":/ico/saveCur.png"),tr("Sauvegarder la lecture en cours"),this);
+            connect(actionSaveCur,SIGNAL(triggered()),this,SLOT(currentToPl()));
+        menuFichier->addAction(actionSaveCur);
+        menuFichier->addSeparator();
         QAction *actionQuit = new QAction(tr("Quitter"),this);
             connect(actionQuit,SIGNAL(triggered()),qApp,SLOT(quit()));
         menuFichier->addAction(actionQuit);
@@ -77,6 +87,8 @@ MainWindow::MainWindow()
         ctrlBar->addSeparator();
 
         ctrlBar->addAction(actionLoop);
+        ctrlBar->addAction(actionClearCur);
+        ctrlBar->addAction(actionSaveCur);
         ctrlBar->addSeparator();
 
         Phonon::VolumeSlider *volumeSlider = new Phonon::VolumeSlider(output);
@@ -86,6 +98,10 @@ MainWindow::MainWindow()
 
     ////////////////////    Main    ////////////////////
     QSplitter *main = new QSplitter;
+    statusBar = new QStatusBar(this);
+        statusBar->setSizeGripEnabled(false);
+        statusBar->showMessage(tr("Bibliothèque à jour"));
+    setStatusBar(statusBar);
 
     //leftDock
     QWidget *leftDock = new QWidget;
@@ -227,10 +243,6 @@ MainWindow::MainWindow()
 
     //mainZone
     //QTreeWidget des chansons de la liste "lecture en cours"
-    QWidget *centerDock = new QWidget;
-    QVBoxLayout *centerlayout = new QVBoxLayout;
-        centerlayout->setMargin(0);
-
     current = new QTreeWidget;
         QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
         current->setHeaderItem(headers);
@@ -239,13 +251,6 @@ MainWindow::MainWindow()
         connect(current,SIGNAL(itemClicked(QTreeWidgetItem *,int)),this,SLOT(changeDockInfo(QTreeWidgetItem *,int)));
         connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
         connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
-
-    proglabel = new QLabel;
-        proglabel->setAlignment(Qt::AlignHCenter);
-        proglabel->setText("Bibliothèque à jour");
-        centerlayout->addWidget(current);
-        centerlayout->addWidget(proglabel);
-    centerDock->setLayout(centerlayout);
 
     //rightDock
     //Cover, wikipédia
@@ -278,7 +283,7 @@ MainWindow::MainWindow()
 
 
     main->addWidget(leftDock);
-    main->addWidget(centerDock);
+    main->addWidget(current);
     main->addWidget(rightDock);
 
     //les différentes parties ne peuvent pas être réduites jusqu'à disparaître
@@ -286,6 +291,7 @@ MainWindow::MainWindow()
     main->setCollapsible(1,false);
     main->setCollapsible(2,false);
     setCentralWidget(main);
+
 
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
@@ -302,6 +308,7 @@ void MainWindow::changeSearch(QString searchTerm)
 {
     QRegExp rx("*" + searchTerm + "*");
     rx.setPatternSyntax(QRegExp::Wildcard);
+    rx.setCaseSensitivity(Qt::CaseInsensitive);
     for(int i=0;i<searchRes->topLevelItemCount();++i)
     {
         if(!(rx.exactMatch(searchRes->topLevelItem(i)->text(0)) || rx.exactMatch(searchRes->topLevelItem(i)->text(1)) || rx.exactMatch(searchRes->topLevelItem(i)->text(2))))
@@ -554,7 +561,7 @@ void MainWindow::refresh()
 
 void MainWindow::scanDir(QString path)
 {
-    proglabel->setText("Importation en cours...");
+    statusBar->showMessage(tr("Importation en cours..."));
     thr->setParam(biblio,path);
     thr->start();
 }
@@ -635,8 +642,20 @@ void MainWindow::insertSong(QStringList song)
     {
         albumItem->addChild(new QTreeWidgetItem(QStringList(title)));
     }
-    searchRes->addTopLevelItem(new QTreeWidgetItem(QStringList(title) << artist << album));
-    searchRes->sortItems(0,Qt::AscendingOrder);
+    exists = false;
+
+    for(int l=0;l < searchRes->topLevelItemCount() && !exists;++l)
+    {
+        if(searchRes->topLevelItem(l)->text(0) == title && searchRes->topLevelItem(l)->text(1) == artist && searchRes->topLevelItem(l)->text(2) == album )
+        {
+            exists = true;
+        }
+    }
+    if(!exists)
+    {
+        searchRes->addTopLevelItem(new QTreeWidgetItem(QStringList(title) << artist << album));
+        searchRes->sortItems(0,Qt::AscendingOrder);
+    }
 }
 
 void MainWindow::showSearch()
@@ -926,4 +945,27 @@ void MainWindow::loadCurrent()
         current->addTopLevelItem(new QTreeWidgetItem(db->getSong(QString::fromStdString(chaine))));
     }
     fichier.close();
+}
+
+void MainWindow::changeStatus(QString str){
+    statusBar->showMessage(str);
+}
+
+void MainWindow::clearCurrent()
+{
+    while(current->topLevelItemCount() != 0)
+        current->takeTopLevelItem(0);
+}
+
+void MainWindow::currentToPl()
+{
+    QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
+    if (!plName.isEmpty())
+        if(db->addPl(plName))
+            plists->addTopLevelItem(new QTreeWidgetItem(QStringList(plName)));
+    for(int i=0;i<current->topLevelItemCount();++i)
+    {
+        insertPl(plName,current->topLevelItem(i),0);
+    }
+    statusBar->showMessage(tr("Liste de lecture enregistrée"));
 }

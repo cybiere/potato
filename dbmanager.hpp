@@ -14,6 +14,8 @@ class dbManager : public QObject
     QSqlQuery query;
     static dbManager* singleton;
     dbManager();
+
+
 public:
 
     static dbManager* getInstance();

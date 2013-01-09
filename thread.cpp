@@ -4,6 +4,7 @@ Thread::Thread()
 {
     mut=new QMutex();
     db =  dbManager::getInstance();
+    req = {0};
 }
 
 void Thread::setParam(QTreeWidget* bib,QString str)
@@ -15,12 +16,12 @@ void Thread::setParam(QTreeWidget* bib,QString str)
 void Thread::run()
 {
     link(path);
+    emit complete(tr("Bibliothèque à jour"));
     exec();
 }
 
 void Thread::link(QString path)
 {
-   mut->lock();
     std::cout << path.toStdString() << std::endl;
     QDir dir(path);
     QStringList nameFilters;
@@ -39,21 +40,21 @@ void Thread::link(QString path)
     {
         if(rx.exactMatch(dir[i]))
         {
-            sleep(1);
+            req.tv_sec = 0;
+            req.tv_nsec = 200 * 1000000L;
+            nanosleep(&req, (struct timespec *)NULL);
             //Traitement pour les fichiers
             insertSong(db->addSong(path + "/" + dir[i]));
 
         }
         else
         {
-            mut->unlock();
             //Scan des sous-dossiers.
             link(path + "/" + dir[i]);
         }
     }
+    emit refresh();
 
-
-    emit complete();
 
 }
 

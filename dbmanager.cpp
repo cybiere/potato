@@ -37,6 +37,7 @@ dbManager* dbManager::getInstance(){
 QStringList dbManager::addSong(QString file)
 {
     QStringList song;
+    QString artiste,titre,album,genre;
     query.prepare("SELECT artist,title,album,genre,nb_played,rating FROM song WHERE file=?");
         query.bindValue(1,file);
     query.exec();
@@ -45,21 +46,30 @@ QStringList dbManager::addSong(QString file)
         TagLib::FileRef f(file.toStdString().c_str());
         TagLib::Tag *tag = f.tag();
 
+        artiste = QString::fromUtf8(tag->artist().toCString(true));
+        album = QString::fromUtf8(tag->title().toCString(true));
+        titre = QString::fromUtf8(tag->album().toCString(true));
+        genre = QString::fromUtf8(tag->genre().toCString(true));
+
         query.prepare("INSERT INTO song (file, artist, title, album, genre, nb_played, rating) VALUES (?, ?, ?, ?, ?, 0, 0)");
              query.bindValue("1", file);
-             query.bindValue("2", QString::fromUtf8(tag->artist().toCString(true)));
-             query.bindValue("3", QString::fromUtf8(tag->title().toCString(true)));
-             query.bindValue("4", QString::fromUtf8(tag->album().toCString(true)));
-             query.bindValue("5", QString::fromUtf8(tag->genre().toCString(true)));
+             query.bindValue("2", artiste);
+             query.bindValue("3", titre);
+             query.bindValue("4", album);
+             query.bindValue("5", genre);
         query.exec();
-        query.prepare("SELECT artist,title,album,genre,nb_played,rating FROM song WHERE file=?");
-            query.bindValue("1",file);
-        query.exec();
+
+    }
+    else
+    {
+        query.first();
+        artiste = query.value(0).toString();
+        titre = query.value(1).toString();
+        album = query.value(2).toString();
     }
 
-    query.first();
 
-    song << query.value(1).toString() << query.value(0).toString() << query.value(2).toString();
+    song << titre << artiste<< album;
     return song;
 }
 

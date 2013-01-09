@@ -22,7 +22,6 @@ class MainWindow : public QMainWindow
     QTreeWidget *searchRes;
     void scanDir(QString);
     void insertSong(QStringList);
-
     void regenPlaylists();
     QAction *actionPlay;
     QAction *actionStop;
@@ -31,7 +30,7 @@ class MainWindow : public QMainWindow
     QAction *actionLoop;
     QLabel *timeTotal;
     QLabel *timeCurrent;
-    QLabel *proglabel;
+    QStatusBar *statusBar;
     QString convertTime(qint64);
     Phonon::MediaObject* media;
     Phonon::AudioOutput* output;
@@ -81,7 +80,9 @@ public slots:
     void saveCurrent();
     void loadCurrent();
     void regenBiblio();
-
+    void clearCurrent();
+    void currentToPl();
+    void changeStatus(QString);
 
 signals :
     void changeWikiInfo(QString);

@@ -6,6 +6,7 @@
 #include <QtGui>
 #include <QThread>
 #include "dbmanager.hpp"
+#include "time.h"
 
 class MusicPlayer;
 
@@ -18,6 +19,7 @@ class Thread : public QThread
             QString path;
             QMutex *mut;
             QTreeWidget *biblio;
+            struct timespec req;
              void insertSong(QStringList song);
 
     public:
@@ -30,7 +32,8 @@ class Thread : public QThread
             void setParam(QTreeWidget*,QString);
 
     signals :
-            void complete();
+            void complete(QString);
+            void refresh();
 };
 
 #endif // MYTHREAD_HPP
