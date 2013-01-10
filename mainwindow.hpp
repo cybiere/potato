@@ -13,6 +13,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+    QWidget *rightDock;
     QWidget *options;
     QWidget *plBlock;
     QWidget *searchBlock;
@@ -22,6 +23,8 @@ class MainWindow : public QMainWindow
     QTreeWidget *current;
     QTreeWidget *plists;
     QTreeWidget *searchRes;
+    QWidget *cover;
+    QLabel *coverImg;
     void scanDir(QString);
     void insertSong(QStringList);
     void regenPlaylists();
@@ -86,6 +89,7 @@ public slots:
     void clearCurrent();
     void currentToPl();
     void changeStatus(QString);
+    void scalePixMap(int,int);
 
 signals :
     void changeWikiInfo(QStringList);

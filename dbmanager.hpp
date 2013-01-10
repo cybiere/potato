@@ -4,6 +4,7 @@
 #include <taglib/taglib.h>
 #include <taglib/fileref.h>
 #include <QtSql>
+#include <QImage>
 
 /** @class Classe de gestion de la BDD */
 
@@ -33,6 +34,7 @@ public:
     void delPl(QString);
     int incrNb_played(QString,int);
     void addSgToPl(QString,QString);
+    bool getCover(QString path, QImage *Image);
 
 
 public slots :

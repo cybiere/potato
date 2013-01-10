@@ -1,4 +1,7 @@
 #include "dbmanager.hpp"
+#include <taglib/id3v2tag.h>
+#include <taglib/attachedpictureframe.h>
+
 
 /** @brief Constructeur privé du dbManager:
  * Création des tables, et initialisation du QSqlQuery.
@@ -291,6 +294,28 @@ QString dbManager::getTitleFromPath(QString path)
     query.first();
 
     return query.value(0).toString();
+}
+
+/** @brief Méthode pour récupérer la cover dans les tags ID3 de la chanson.
+ * @param path : chemin de la musique dont on veut la cover
+ * @param data : pointeur pour renvoyer les données de l'image
+ * @return la taille de l'image
+ */
+bool dbManager::getCover(QString path,QImage *Image)
+{
+    TagLib::ID3v2::Tag Tag(TagLib::FileRef(TagLib::FileName(path.toStdString().c_str())).file(),0);
+    TagLib::ID3v2::FrameList Liste = Tag.frameListMap()["APIC"];
+
+    if (!Liste.isEmpty()){
+        TagLib::ID3v2::AttachedPictureFrame *Pic = static_cast<TagLib::ID3v2::AttachedPictureFrame *>(Liste.front());
+        QString tmp(Pic->picture().data());
+
+        if ( !tmp.toStdString().empty()){
+            Image->loadFromData((const uchar *) Pic->picture().data(), Pic->picture().size());
+            return true;
+        }
+    }
+    return false;
 }
 
 /** @variable instance de notre dbManager

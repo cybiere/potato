@@ -256,27 +256,28 @@ MainWindow::MainWindow()
 
     //rightDock
     //Cover, wikipédia
-    QWidget *rightDock = new QWidget;
+    rightDock = new QWidget;
     rightDock->setMinimumWidth(200);
     rightDock->setMaximumWidth(300);
         QVBoxLayout *rightLay = new QVBoxLayout;
         rightLay->setMargin(0);
 
 
-    QPushButton *cov = new QPushButton(tr("Pochette"));
-        cov->setFlat(true);
-        //connect(cov,SIGNAL(clicked()),this,SLOT(showCover()));
-    QWidget *cover = new QWidget;
-
     QFrame *separator4 = new QFrame();
         separator4->setFrameShape(QFrame::HLine);
         separator4->setFrameShadow(QFrame::Sunken);
 
+    cover = new QWidget;
+    coverImg = new QLabel;
+    cover->hide();
+    QVBoxLayout *covLay = new QVBoxLayout;
+    covLay->addWidget(separator4);
+    covLay->addWidget(coverImg);
+    cover->setLayout(covLay);
+
     WikiInfo *wikiView = new WikiInfo;
     connect(this,SIGNAL(changeWikiInfo(QStringList)),wikiView,SLOT(search(QStringList)));
     rightLay->addWidget(wikiView);
-    rightLay->addWidget(separator4);
-    rightLay->addWidget(cov);
     rightLay->addWidget(cover);
 
     rightDock->setLayout(rightLay);
@@ -287,6 +288,8 @@ MainWindow::MainWindow()
     main->addWidget(leftDock);
     main->addWidget(current);
     main->addWidget(rightDock);
+
+    connect(main,SIGNAL(splitterMoved(int,int)),this,SLOT(scalePixMap(int,int)));
 
     //les différentes parties ne peuvent pas être réduites jusqu'à disparaître
     main->setCollapsible(0,false);
@@ -307,13 +310,44 @@ MainWindow::MainWindow()
     loadCurrent();
 }
 
-/** @brief Méthode pour changer la page du block Wiki
+/** @brief Slot pour changer la taille de la cover en fonction de la largeur de rightDock
+ * @param index : l'index de la poignée déplacée dans le QSplitter
+ */
+void MainWindow::scalePixMap(int,int index)
+{
+    if(index == 2)
+    {
+        if(coverImg->pixmap() == 0)
+            return;
+        QImage *Image = new QImage;
+        if(!db->getCover(current->currentItem()->text(6),Image))
+        {
+            cover->hide();
+            return;
+        }
+        QPixmap pix;
+        pix.convertFromImage(*Image);
+        coverImg->setPixmap(pix.scaledToWidth(rightDock->width()-20));
+    }
+}
+
+/** @brief Slot pour changer la page du block Wiki & le cover
  * @param item : item sélectionner pour obtenir l'artiste à charger.
  */
 void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
 {
     QStringList song = QStringList(item->text(0)) << item->text(1) << item->text(2);
     emit changeWikiInfo(song);
+    QImage *Image = new QImage;
+    if(!db->getCover(item->text(6),Image))
+    {
+        cover->hide();
+        return;
+    }
+    QPixmap pix;
+    pix.convertFromImage(*Image);
+    coverImg->setPixmap(pix.scaledToWidth(rightDock->width()-20));
+    cover->show();
 }
 
 /** @brief Méthode pour la recherche dans la bibliothèque
