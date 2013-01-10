@@ -4,7 +4,9 @@
 #include <QMainWindow>
 #include <phonon>
 #include "dbmanager.hpp"
-#include "thread.hpp"
+#include "scandir.hpp"
+#include "insertpl.hpp"
+#include <iostream>
 #include <QtGui>
 
 /** @class Classe de gestion de la MainWindow */
@@ -43,7 +45,9 @@ class MainWindow : public QMainWindow
     QTreeWidgetItem *playing;
     void bold();
     void clear();
-    Thread* thr;
+    ScanDir* scan;
+    InsertPl* insert;
+    QMutex * mut;
 
 
 public:
@@ -51,6 +55,7 @@ public:
     dbManager *db;
 
 public slots:
+    void editTags();
     void showOptions();
     void showBiblio();
     void showPlists();
@@ -80,13 +85,15 @@ public slots:
     void addCurrentToPl();
     void addSearchToPl();
     void addBiblioToPl();
-    void insertPl(QString,QTreeWidgetItem *,int);
+    void insertPl(QString,QTreeWidgetItem *,int,QTreeWidgetItem* wait=NULL);
     void changeDockInfo(QTreeWidgetItem *,int);
     void changeSearch(QString);
     void saveCurrent();
     void loadCurrent();
     void regenBiblio();
     void clearCurrent();
+    void clearBiblio();
+    void clearRes();
     void currentToPl();
     void changeStatus(QString);
     void scalePixMap(int,int);

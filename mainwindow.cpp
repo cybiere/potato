@@ -1,20 +1,16 @@
 #include "mainwindow.hpp"
 #include "wikiinfo.hpp"
+#include "tageditor.hpp"
 #include <fstream>
 
 /** @brief Constructeur d'une MainWindow */
 MainWindow::MainWindow()
 {
     db = dbManager::getInstance();
-    thr = new Thread;
     media = new Phonon::MediaObject();
     media->setTickInterval(1000);
     output = new Phonon::AudioOutput(Phonon::MusicCategory);
     createPath(media,output);
-
-    ///////////////     Connect Thread      ////////////
-    connect(thr,SIGNAL(refresh()),this,SLOT(regenBiblio()));
-    connect(thr,SIGNAL(finish(QString)),this,SLOT(changeStatus(QString)));
 
     ///////////////     Connect media      ////////////
     connect(media,SIGNAL(totalTimeChanged(qint64)),this,SLOT(upTimeTot(qint64)));
@@ -31,75 +27,75 @@ MainWindow::MainWindow()
     QMenu *menuFichier = menuBar()->addMenu(tr("Fichier"));
 
 
-        QAction *actionClearCur = new QAction(QIcon(":/ico/clearCur.png"),tr("Vider la lecture en cours"),this);
-            connect(actionClearCur,SIGNAL(triggered()),this,SLOT(clearCurrent()));
-        menuFichier->addAction(actionClearCur);
-        QAction *actionSaveCur = new QAction(QIcon(":/ico/saveCur.png"),tr("Sauvegarder la lecture en cours"),this);
-            connect(actionSaveCur,SIGNAL(triggered()),this,SLOT(currentToPl()));
-        menuFichier->addAction(actionSaveCur);
-        menuFichier->addSeparator();
-        QAction *actionQuit = new QAction(tr("Quitter"),this);
-            connect(actionQuit,SIGNAL(triggered()),qApp,SLOT(quit()));
-        menuFichier->addAction(actionQuit);
+    QAction *actionClearCur = new QAction(QIcon(":/ico/clearCur.png"),tr("Vider la lecture en cours"),this);
+    connect(actionClearCur,SIGNAL(triggered()),this,SLOT(clearCurrent()));
+    menuFichier->addAction(actionClearCur);
+    QAction *actionSaveCur = new QAction(QIcon(":/ico/saveCur.png"),tr("Sauvegarder la lecture en cours"),this);
+    connect(actionSaveCur,SIGNAL(triggered()),this,SLOT(currentToPl()));
+    menuFichier->addAction(actionSaveCur);
+    menuFichier->addSeparator();
+    QAction *actionQuit = new QAction(tr("Quitter"),this);
+    connect(actionQuit,SIGNAL(triggered()),qApp,SLOT(quit()));
+    menuFichier->addAction(actionQuit);
 
     //Menu Lecture
     QMenu *menuLecture = menuBar()->addMenu(tr("Lecture"));
 
-        actionPlay = new QAction(QIcon(":/ico/play.png"),tr("Lecture"), this);
-            connect(actionPlay,SIGNAL(triggered()),this,SLOT(play()));
-        actionStop = new QAction(QIcon(":/ico/stop.png"),tr("Stop"), this);
-            connect(actionStop,SIGNAL(triggered()),this,SLOT(stop()));
-        actionPrev = new QAction(QIcon(":/ico/prev.png"),tr("Précédent"), this);
-            connect(actionPrev,SIGNAL(triggered()),this,SLOT(prev()));
-        actionNext = new QAction(QIcon(":/ico/next.png"),tr("Suivant"), this);
-            connect(actionNext,SIGNAL(triggered()),this,SLOT(next()));
-        actionLoop = new QAction(QIcon(":/ico/loop_off.png"),tr("Répéter chanson"), this);
-            connect(actionLoop,SIGNAL(triggered()),this,SLOT(loop()));
-            loopState = 0;
+    actionPlay = new QAction(QIcon(":/ico/play.png"),tr("Lecture"), this);
+    connect(actionPlay,SIGNAL(triggered()),this,SLOT(play()));
+    actionStop = new QAction(QIcon(":/ico/stop.png"),tr("Stop"), this);
+    connect(actionStop,SIGNAL(triggered()),this,SLOT(stop()));
+    actionPrev = new QAction(QIcon(":/ico/prev.png"),tr("Précédent"), this);
+    connect(actionPrev,SIGNAL(triggered()),this,SLOT(prev()));
+    actionNext = new QAction(QIcon(":/ico/next.png"),tr("Suivant"), this);
+    connect(actionNext,SIGNAL(triggered()),this,SLOT(next()));
+    actionLoop = new QAction(QIcon(":/ico/loop_off.png"),tr("Répéter chanson"), this);
+    connect(actionLoop,SIGNAL(triggered()),this,SLOT(loop()));
+    loopState = 0;
 
-        menuLecture->addAction(actionPlay);
-        menuLecture->addAction(actionStop);
-        menuLecture->addSeparator();
-        menuLecture->addAction(actionPrev);
-        menuLecture->addAction(actionNext);
-        menuLecture->addSeparator();
-        menuLecture->addAction(actionLoop);
+    menuLecture->addAction(actionPlay);
+    menuLecture->addAction(actionStop);
+    menuLecture->addSeparator();
+    menuLecture->addAction(actionPrev);
+    menuLecture->addAction(actionNext);
+    menuLecture->addSeparator();
+    menuLecture->addAction(actionLoop);
     ////////////////////    Ctrl    ////////////////////
 
-        //Barre de controle
-        //Actions à mettre en place
-        QToolBar *ctrlBar = addToolBar("Controles");
-        ctrlBar->setFloatable(false);
-        ctrlBar->setMovable(false);
+    //Barre de controle
+    //Actions à mettre en place
+    QToolBar *ctrlBar = addToolBar("Controles");
+    ctrlBar->setFloatable(false);
+    ctrlBar->setMovable(false);
 
-        ctrlBar->addAction(actionPlay);
-        ctrlBar->addAction(actionStop);
-        ctrlBar->addSeparator();
+    ctrlBar->addAction(actionPlay);
+    ctrlBar->addAction(actionStop);
+    ctrlBar->addSeparator();
 
-        ctrlBar->addAction(actionPrev);
-        ctrlBar->addAction(actionNext);
-        ctrlBar->addSeparator();
+    ctrlBar->addAction(actionPrev);
+    ctrlBar->addAction(actionNext);
+    ctrlBar->addSeparator();
 
-        timeCurrent = new QLabel("--:--");
-        timeTotal = new QLabel("--:--");
+    timeCurrent = new QLabel("--:--");
+    timeTotal = new QLabel("--:--");
 
 
-        ctrlBar->addWidget(timeCurrent);
+    ctrlBar->addWidget(timeCurrent);
 
-        Phonon::SeekSlider *slider = new Phonon::SeekSlider(media);
-        ctrlBar->addWidget(slider);
+    Phonon::SeekSlider *slider = new Phonon::SeekSlider(media);
+    ctrlBar->addWidget(slider);
 
-        ctrlBar->addWidget(timeTotal);
-        ctrlBar->addSeparator();
+    ctrlBar->addWidget(timeTotal);
+    ctrlBar->addSeparator();
 
-        ctrlBar->addAction(actionLoop);
-        ctrlBar->addAction(actionClearCur);
-        ctrlBar->addAction(actionSaveCur);
-        ctrlBar->addSeparator();
+    ctrlBar->addAction(actionLoop);
+    ctrlBar->addAction(actionClearCur);
+    ctrlBar->addAction(actionSaveCur);
+    ctrlBar->addSeparator();
 
-        Phonon::VolumeSlider *volumeSlider = new Phonon::VolumeSlider(output);
-            volumeSlider->setMaximumWidth(180);
-            ctrlBar->addWidget(volumeSlider);
+    Phonon::VolumeSlider *volumeSlider = new Phonon::VolumeSlider(output);
+    volumeSlider->setMaximumWidth(180);
+    ctrlBar->addWidget(volumeSlider);
 
 
     ////////////////////    Main    ////////////////////
@@ -109,150 +105,150 @@ MainWindow::MainWindow()
     QWidget *leftDock = new QWidget;
     leftDock->setMinimumWidth(200);
     leftDock->setMaximumWidth(300);
-        QVBoxLayout *leftLay = new QVBoxLayout;
-        leftLay->setMargin(0);
-        //Recherche
-        searchBlock = new QWidget;
-            QVBoxLayout *searchLay = new QVBoxLayout;
-                searchField = new QLineEdit;
-                connect(searchField,SIGNAL(textChanged(QString)),this,SLOT(changeSearch(QString)));
+    QVBoxLayout *leftLay = new QVBoxLayout;
+    leftLay->setMargin(0);
+    //Recherche
+    searchBlock = new QWidget;
+    QVBoxLayout *searchLay = new QVBoxLayout;
+    searchField = new QLineEdit;
+    connect(searchField,SIGNAL(textChanged(QString)),this,SLOT(changeSearch(QString)));
 
-                searchLay->addWidget(searchField);
-                searchRes = new QTreeWidget;
-                    searchRes->header()->close();
-                    searchRes->setContextMenuPolicy(Qt::CustomContextMenu);
-                    connect(searchRes,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSearch(QPoint)));
-                    connect(searchRes,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addSearchToCurrent(QTreeWidgetItem*,int)));
-                searchLay->addWidget(searchRes);
-            searchBlock->setLayout(searchLay);
-            searchBlock->hide();
+    searchLay->addWidget(searchField);
+    searchRes = new QTreeWidget;
+    searchRes->header()->close();
+    searchRes->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(searchRes,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSearch(QPoint)));
+    connect(searchRes,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addSearchToCurrent(QTreeWidgetItem*,int)));
+    searchLay->addWidget(searchRes);
+    searchBlock->setLayout(searchLay);
+    searchBlock->hide();
 
-        //Bibliothèque
-        biblio = new QTreeWidget;
-            //Pas de headers, pas d'expand au double clic
-            biblio->header()->close();
-            biblio->setExpandsOnDoubleClick(false);
-            biblio->setContextMenuPolicy(Qt::CustomContextMenu);
-            connect(biblio,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextBiblio(QPoint)));
-            connect(biblio,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
+    //Bibliothèque
+    biblio = new QTreeWidget;
+    //Pas de headers, pas d'expand au double clic
+    biblio->header()->close();
+    biblio->setExpandsOnDoubleClick(false);
+    biblio->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(biblio,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextBiblio(QPoint)));
+    connect(biblio,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
 
-        //Playlists
-        plBlock = new QWidget;
-            QVBoxLayout *plLay = new QVBoxLayout;
-                plLay->setMargin(0);
-                plists = new QTreeWidget;
-                    plists->setContextMenuPolicy(Qt::CustomContextMenu);
-                    connect(plists,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextPl(QPoint)));
-                    //Pas de headers, pas d'expand au double clic
-                    plists->header()->close();
-                    plists->setExpandsOnDoubleClick(false);
-                    connect(plists,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
-                plLay->addWidget(plists);
-                //Gestion des listes de lecture
-                QHBoxLayout *ctrlLay = new QHBoxLayout;
-                    ctrlLay->setMargin(0);
-                    //ajouter une liste de lecture
-                    QPushButton *addPlist = new QPushButton(QIcon(":/ico/add.png"),"");
-                        connect(addPlist,SIGNAL(clicked()),this,SLOT(addPl()));
-                    //retirer la liste de lecture sélectionnée
-                    QPushButton *delPlist = new QPushButton(QIcon(":/ico/del.png"),"");
-                        connect(delPlist,SIGNAL(clicked()),this,SLOT(delPl()));
-                    ctrlLay->addWidget(addPlist);
-                    ctrlLay->addWidget(delPlist);
-                plLay->addLayout(ctrlLay);
-            plBlock->hide();
-            plBlock->setLayout(plLay);
+    //Playlists
+    plBlock = new QWidget;
+    QVBoxLayout *plLay = new QVBoxLayout;
+    plLay->setMargin(0);
+    plists = new QTreeWidget;
+    plists->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(plists,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextPl(QPoint)));
+    //Pas de headers, pas d'expand au double clic
+    plists->header()->close();
+    plists->setExpandsOnDoubleClick(false);
+    connect(plists,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(addToCurrent(QTreeWidgetItem*,int)));
+    plLay->addWidget(plists);
+    //Gestion des listes de lecture
+    QHBoxLayout *ctrlLay = new QHBoxLayout;
+    ctrlLay->setMargin(0);
+    //ajouter une liste de lecture
+    QPushButton *addPlist = new QPushButton(QIcon(":/ico/add.png"),"");
+    connect(addPlist,SIGNAL(clicked()),this,SLOT(addPl()));
+    //retirer la liste de lecture sélectionnée
+    QPushButton *delPlist = new QPushButton(QIcon(":/ico/del.png"),"");
+    connect(delPlist,SIGNAL(clicked()),this,SLOT(delPl()));
+    ctrlLay->addWidget(addPlist);
+    ctrlLay->addWidget(delPlist);
+    plLay->addLayout(ctrlLay);
+    plBlock->hide();
+    plBlock->setLayout(plLay);
 
 
-        //Options
-        options = new QWidget;
-            QVBoxLayout *optionsLay = new QVBoxLayout;
-                optionsLay->setMargin(0);
-                options->setLayout(optionsLay);
-                options->hide();
+    //Options
+    options = new QWidget;
+    QVBoxLayout *optionsLay = new QVBoxLayout;
+    optionsLay->setMargin(0);
+    options->setLayout(optionsLay);
+    options->hide();
 
-                //Gestion des dossiers sources de chansons
-                QHBoxLayout *srcDirLay = new QHBoxLayout;
-                    srcDirLay->setMargin(0);
-                    //liste pour afficher
-                    srcDirList = new QListWidget;
-                    srcDirList->addItems(db->getSrcDirs());
-                    srcDirList->setContextMenuPolicy(Qt::CustomContextMenu);
-                    connect(srcDirList,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSrc(QPoint)));
-                    QVBoxLayout *srcDirActionLay = new QVBoxLayout;
-                        srcDirActionLay->setMargin(0);
-                        //trois boutons :
-                        //ajouter une source
-                        QPushButton *addSrcDir = new QPushButton(QIcon(":/ico/add.png"),"");
-                            connect(addSrcDir,SIGNAL(clicked()),this,SLOT(addSourceDir()));
-                        //retirer la source sélectionnée
-                        QPushButton *delSrcDir = new QPushButton(QIcon(":/ico/del.png"),"");
-                            connect(delSrcDir,SIGNAL(clicked()),this,SLOT(delSourceDir()));
-                        //rafraichier la bibliothèque
-                        QPushButton *refBiblio = new QPushButton(QIcon(":/ico/ref.png"),"");
-                            connect(refBiblio,SIGNAL(clicked()),this,SLOT(refresh()));
-                        srcDirActionLay->addWidget(addSrcDir);
-                        srcDirActionLay->addWidget(delSrcDir);
-                        srcDirActionLay->addWidget(refBiblio);
-                        //QWidget vide pour aligner les trois boutons vers le haut
-                        srcDirActionLay->addWidget(new QWidget);
-                    srcDirLay->addWidget(srcDirList);
-                    srcDirLay->addLayout(srcDirActionLay);
-                optionsLay->addLayout(srcDirLay);
+    //Gestion des dossiers sources de chansons
+    QHBoxLayout *srcDirLay = new QHBoxLayout;
+    srcDirLay->setMargin(0);
+    //liste pour afficher
+    srcDirList = new QListWidget;
+    srcDirList->addItems(db->getSrcDirs());
+    srcDirList->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(srcDirList,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextSrc(QPoint)));
+    QVBoxLayout *srcDirActionLay = new QVBoxLayout;
+    srcDirActionLay->setMargin(0);
+    //trois boutons :
+    //ajouter une source
+    QPushButton *addSrcDir = new QPushButton(QIcon(":/ico/add.png"),"");
+    connect(addSrcDir,SIGNAL(clicked()),this,SLOT(addSourceDir()));
+    //retirer la source sélectionnée
+    QPushButton *delSrcDir = new QPushButton(QIcon(":/ico/del.png"),"");
+    connect(delSrcDir,SIGNAL(clicked()),this,SLOT(delSourceDir()));
+    //rafraichier la bibliothèque
+    QPushButton *refBiblio = new QPushButton(QIcon(":/ico/ref.png"),"");
+    connect(refBiblio,SIGNAL(clicked()),this,SLOT(refresh()));
+    srcDirActionLay->addWidget(addSrcDir);
+    srcDirActionLay->addWidget(delSrcDir);
+    srcDirActionLay->addWidget(refBiblio);
+    //QWidget vide pour aligner les trois boutons vers le haut
+    srcDirActionLay->addWidget(new QWidget);
+    srcDirLay->addWidget(srcDirList);
+    srcDirLay->addLayout(srcDirActionLay);
+    optionsLay->addLayout(srcDirLay);
 
-        //bouton pour afficher la recherche
-        QPushButton *search = new QPushButton(tr("Recherche"));
-            search->setFlat(true);
-            connect(search,SIGNAL(clicked()),this,SLOT(showSearch()));
+    //bouton pour afficher la recherche
+    QPushButton *search = new QPushButton(tr("Recherche"));
+    search->setFlat(true);
+    connect(search,SIGNAL(clicked()),this,SLOT(showSearch()));
 
-        //bouton pour afficher la bibliothèque
-        QPushButton *bibl = new QPushButton(tr("Bibliothèque"));
-            bibl->setFlat(true);
-            connect(bibl,SIGNAL(clicked()),this,SLOT(showBiblio()));
+    //bouton pour afficher la bibliothèque
+    QPushButton *bibl = new QPushButton(tr("Bibliothèque"));
+    bibl->setFlat(true);
+    connect(bibl,SIGNAL(clicked()),this,SLOT(showBiblio()));
 
-        //bouton pour afficher les playlists
-        QPushButton *playl = new QPushButton(tr("Listes de lecture"));
-            playl->setFlat(true);
-            connect(playl,SIGNAL(clicked()),this,SLOT(showPlists()));
+    //bouton pour afficher les playlists
+    QPushButton *playl = new QPushButton(tr("Listes de lecture"));
+    playl->setFlat(true);
+    connect(playl,SIGNAL(clicked()),this,SLOT(showPlists()));
 
-        //bouton pour afficher les options
-        QPushButton *opt = new QPushButton(tr("Options"));
-            opt->setFlat(true);
-            connect(opt,SIGNAL(clicked()),this,SLOT(showOptions()));
+    //bouton pour afficher les options
+    QPushButton *opt = new QPushButton(tr("Options"));
+    opt->setFlat(true);
+    connect(opt,SIGNAL(clicked()),this,SLOT(showOptions()));
 
-        QFrame *separator = new QFrame();
-            separator->setFrameShape(QFrame::HLine);
-            separator->setFrameShadow(QFrame::Sunken);
-        QFrame *separator2 = new QFrame();
-            separator2->setFrameShape(QFrame::HLine);
-        separator2->setFrameShadow(QFrame::Sunken);
-        QFrame *separator3 = new QFrame();
-            separator3->setFrameShape(QFrame::HLine);
-            separator3->setFrameShadow(QFrame::Sunken);
+    QFrame *separator = new QFrame();
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    QFrame *separator2 = new QFrame();
+    separator2->setFrameShape(QFrame::HLine);
+    separator2->setFrameShadow(QFrame::Sunken);
+    QFrame *separator3 = new QFrame();
+    separator3->setFrameShape(QFrame::HLine);
+    separator3->setFrameShadow(QFrame::Sunken);
 
-        leftLay->addWidget(search);
-        leftLay->addWidget(searchBlock);
-        leftLay->addWidget(separator);
-        leftLay->addWidget(bibl);
-        leftLay->addWidget(biblio);
-        leftLay->addWidget(separator2);
-        leftLay->addWidget(playl);
-        leftLay->addWidget(plBlock);
-        leftLay->addWidget(separator3);
-        leftLay->addWidget(opt);
-        leftLay->addWidget(options);
+    leftLay->addWidget(search);
+    leftLay->addWidget(searchBlock);
+    leftLay->addWidget(separator);
+    leftLay->addWidget(bibl);
+    leftLay->addWidget(biblio);
+    leftLay->addWidget(separator2);
+    leftLay->addWidget(playl);
+    leftLay->addWidget(plBlock);
+    leftLay->addWidget(separator3);
+    leftLay->addWidget(opt);
+    leftLay->addWidget(options);
     leftDock->setLayout(leftLay);
 
     //mainZone
     //QTreeWidget des chansons de la liste "lecture en cours"
     current = new QTreeWidget;
-        QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
-        current->setHeaderItem(headers);
-        current->setContextMenuPolicy(Qt::CustomContextMenu);
+    QTreeWidgetItem *headers = new QTreeWidgetItem(QStringList(tr("Titre")) << tr("Auteur") << tr("Album") << tr("Genre") << tr("Jouée") << tr("Note") << tr("Path"));
+    current->setHeaderItem(headers);
+    current->setContextMenuPolicy(Qt::CustomContextMenu);
 
-        connect(current,SIGNAL(itemClicked(QTreeWidgetItem *,int)),this,SLOT(changeDockInfo(QTreeWidgetItem *,int)));
-        connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
-        connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
+    connect(current,SIGNAL(itemClicked(QTreeWidgetItem *,int)),this,SLOT(changeDockInfo(QTreeWidgetItem *,int)));
+    connect(current,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(contextCurrent(QPoint)));
+    connect(current,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(selectedSong(QTreeWidgetItem*,int)));
 
     //rightDock
     //Cover, wikipédia
@@ -267,11 +263,22 @@ MainWindow::MainWindow()
         separator4->setFrameShape(QFrame::HLine);
         separator4->setFrameShadow(QFrame::Sunken);
 
+
+
     cover = new QWidget;
     coverImg = new QLabel;
     cover->hide();
+
+    //bouton pour afficher/masquer la cover
+    QPushButton *cov = new QPushButton(tr("Couverture"));
+        cov->setFlat(true);
+        cov->setCheckable(true);
+        cov->setChecked(true);
+        connect(cov,SIGNAL(toggled(bool)),coverImg,SLOT(setVisible(bool)));
+
     QVBoxLayout *covLay = new QVBoxLayout;
     covLay->addWidget(separator4);
+    covLay->addWidget(cov);
     covLay->addWidget(coverImg);
     cover->setLayout(covLay);
 
@@ -299,15 +306,49 @@ MainWindow::MainWindow()
 
     /////////////////    Barre de statut    //////////////////
     statusBar = new QStatusBar(this);
-        statusBar->setSizeGripEnabled(false);
-        statusBar->showMessage(tr("Bibliothèque à jour"));
+    statusBar->setSizeGripEnabled(false);
+    statusBar->showMessage(tr("Bibliothèque à jour"));
     setStatusBar(statusBar);
+
+    /////////////////    Threads     ///////////////////
+    mut = new QMutex;
+    scan = new ScanDir(mut);
+    insert = new InsertPl(mut,current,searchRes,plists);
+
+
+    ///////////////   Connect Thread (Scandir)   ////////////
+    connect(scan,SIGNAL(refresh()),this,SLOT(regenBiblio()));
+    connect(scan,SIGNAL(finish(QString)),this,SLOT(changeStatus(QString)));
+
+    ///////////////   Connect Thread (Scandir)   ////////////
+    connect(insert,SIGNAL(changestatusBar(QString)),this,SLOT(changeStatus(QString)));
 
 
     regenBiblio();
     biblio->sortItems(0,Qt::AscendingOrder);
     regenPlaylists();
     loadCurrent();
+}
+
+
+/** @brief Slot pour éditer les tags ID3 de la chanson sélectionnée dans la playlist en cours
+ */
+void MainWindow::editTags()
+{
+    TagEditor *tag = new TagEditor(current->currentItem()->text(6));
+    int dial = tag->exec();
+    //si on a fait un changement des tags, on met l'affichage à jour
+    if(dial == QDialog::Accepted)
+    {
+        clearBiblio();
+        clearRes();
+        regenBiblio();
+        QStringList song = db->getSong(current->currentItem()->text(6));
+        current->currentItem()->setText(0,song.takeFirst());
+        current->currentItem()->setText(1,song.takeFirst());
+        current->currentItem()->setText(2,song.takeFirst());
+        current->currentItem()->setText(3,song.takeFirst());
+    }
 }
 
 /** @brief Slot pour changer la taille de la cover en fonction de la largeur de rightDock
@@ -331,7 +372,8 @@ void MainWindow::scalePixMap(int,int index)
     }
 }
 
-/** @brief Slot pour changer la page du block Wiki & le cover
+
+/** @brief Méthode pour changer la page du block Wiki
  * @param item : item sélectionner pour obtenir l'artiste à charger.
  */
 void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
@@ -349,6 +391,7 @@ void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
     coverImg->setPixmap(pix.scaledToWidth(rightDock->width()-20));
     cover->show();
 }
+
 
 /** @brief Méthode pour la recherche dans la bibliothèque
  * @param searchTerm : terme pour la recherche
@@ -380,6 +423,12 @@ void MainWindow::contextCurrent(QPoint pos)
     QAction *titre = new QAction(current->currentItem()->text(0),this);
     titre->setEnabled(false);
     context->addAction(titre);
+
+    QAction *tags = new QAction(tr("Editer les informations..."),this);
+    connect(tags,SIGNAL(triggered()),this,SLOT(editTags()));
+    context->addAction(tags);
+
+
     QMenu *playlists = context->addMenu(tr("Ajouter à une liste de lecture"));
     for(int i=0;i<plists->topLevelItemCount();++i)
     {
@@ -387,6 +436,8 @@ void MainWindow::contextCurrent(QPoint pos)
             connect(action,SIGNAL(triggered()),this,SLOT(addCurrentToPl()));
         playlists->addAction(action);
     }
+    if(plists->topLevelItemCount() == 0)
+        playlists->setEnabled(false);
     context->exec(current->mapToGlobal(pos));
 }
 
@@ -412,9 +463,11 @@ void MainWindow::contextSearch(QPoint pos)
     for(int i=0;i<plists->topLevelItemCount();++i)
     {
         QAction *action = new QAction(plists->topLevelItem(i)->text(0),this);
-            connect(action,SIGNAL(triggered()),this,SLOT(addSearchToPl()));
+        connect(action,SIGNAL(triggered()),this,SLOT(addSearchToPl()));
         playlists->addAction(action);
     }
+    if(plists->topLevelItemCount() == 0)
+        playlists->setEnabled(false);
     context->exec(searchRes->mapToGlobal(pos));
 }
 
@@ -425,17 +478,19 @@ void MainWindow::contextBiblio(QPoint pos)
 {
     QMenu *context = new QMenu();
     QAction *actionPlay = new QAction(QIcon(":/ico/play.png"),tr("Lire"),this);
-        connect(actionPlay,SIGNAL(triggered()),this,SLOT(playSelected()));
-        if(biblio->currentItem()==NULL)
-            actionPlay->setEnabled(false);
+    connect(actionPlay,SIGNAL(triggered()),this,SLOT(playSelected()));
+    if(biblio->currentItem()==NULL)
+        actionPlay->setEnabled(false);
     context->addAction(actionPlay);
     QMenu *playlists = context->addMenu(tr("Ajouter à une liste de lecture"));
     for(int i=0;i<plists->topLevelItemCount();++i)
     {
         QAction *action = new QAction(plists->topLevelItem(i)->text(0),this);
-            connect(action,SIGNAL(triggered()),this,SLOT(addBiblioToPl()));
+        connect(action,SIGNAL(triggered()),this,SLOT(addBiblioToPl()));
         playlists->addAction(action);
     }
+    if(plists->topLevelItemCount() == 0)
+        playlists->setEnabled(false);
     context->exec(biblio->mapToGlobal(pos));
 }
 
@@ -446,15 +501,15 @@ void MainWindow::contextSrc(QPoint pos)
 {
     QMenu *context = new QMenu();
     QAction *actionAdd = new QAction(QIcon(":/ico/add.png"),tr("Ajouter") + "...",this);
-        connect(actionAdd,SIGNAL(triggered()),this,SLOT(addSourceDir()));
+    connect(actionAdd,SIGNAL(triggered()),this,SLOT(addSourceDir()));
     context->addAction(actionAdd);
     QAction *actionDel = new QAction(QIcon(":/ico/del.png"),tr("Supprimer"),this);
-        connect(actionDel,SIGNAL(triggered()),this,SLOT(delSourceDir()));
-        if(srcDirList->currentItem()==NULL)
-            actionDel->setEnabled(false);
+    connect(actionDel,SIGNAL(triggered()),this,SLOT(delSourceDir()));
+    if(srcDirList->currentItem()==NULL)
+        actionDel->setEnabled(false);
     context->addAction(actionDel);
     QAction *actionRef = new QAction(QIcon(":/ico/ref.png"),tr("Rafraîchir"),this);
-        connect(actionRef,SIGNAL(triggered()),this,SLOT(refresh()));
+    connect(actionRef,SIGNAL(triggered()),this,SLOT(refresh()));
     context->addAction(actionRef);
     context->exec(srcDirList->mapToGlobal(pos));
 }
@@ -466,12 +521,12 @@ void MainWindow::contextPl(QPoint pos)
 {
     QMenu *context = new QMenu();
     QAction *actionAdd = new QAction(QIcon(":/ico/add.png"),tr("Ajouter") + "...",this);
-        connect(actionAdd,SIGNAL(triggered()),this,SLOT(addPl()));
+    connect(actionAdd,SIGNAL(triggered()),this,SLOT(addPl()));
     context->addAction(actionAdd);
     QAction *actionDel = new QAction(QIcon(":/ico/del.png"),tr("Supprimer"),this);
-        connect(actionDel,SIGNAL(triggered()),this,SLOT(delPl()));
-        if(plists->currentItem()==NULL)
-            actionDel->setEnabled(false);
+    connect(actionDel,SIGNAL(triggered()),this,SLOT(delPl()));
+    if(plists->currentItem()==NULL)
+        actionDel->setEnabled(false);
     context->addAction(actionDel);
     context->exec(plists->mapToGlobal(pos));
 }
@@ -481,7 +536,6 @@ void MainWindow::addSearchToPl()
 {
     (static_cast<QAction *>(sender())->text(),searchRes->currentItem(),0);
 }
-
 /** @brief Méthode pour ajouter le contenu de la playlist courante dans une playlist (depuis le menu déroulant) */
 void MainWindow::addCurrentToPl()
 {
@@ -516,94 +570,11 @@ void MainWindow::addBiblioToPl()
  * @param item : item à insérer
  * @param niveau : niveau du QTreeWidgetItem :  0 : chanson, 1 : album, 2 : artiste
  */
-void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
+void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau,QTreeWidgetItem* wait)
 {
-    //Traite différement si l'ajout provient de la recherche (pas les mêmes infos dans l'arbre)
-    if(item->treeWidget() == searchRes)
-    {
-        QString path;
-        QStringList song = db->getSong(item->text(0),item->text(2),item->text(1));
-
-        path = song.takeAt(6);
-        QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(item->text(0)) << path);
-        bool found = false;
-        QTreeWidgetItem *pl;
-        //recherche l'item de la playlist en question
-        for(int k=0;k<plists->topLevelItemCount() && !found;++k)
-        {
-            if(plists->topLevelItem(k)->text(0) == playlist)
-            {
-                db->addSgToPl(path,playlist);
-                pl = plists->topLevelItem(k);
-                found = true;
-            }
-        }
-        if(!found)
-        {
-            //playlist pas dans la view mais dans base de données (vu qu'envoyée via QAction) => ERREUR
-            std::cerr << "erreur : Playlist inexistante." << std::endl;
-            exit(1);
-        }
-        pl->addChild(songItem);
-        return;
-    }
-
-
-    //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
-    //artiste
-    if(niveau == 2)
-    {
-        for(int i=0;i<item->childCount();++i)
-            insertPl(playlist,item->child(i),1);
-    }
-    //album
-    else if(niveau == 1)
-    {
-        for(int j=0;j<item->childCount();++j)
-            insertPl(playlist,item->child(j),0);
-    }
-    //chanson
-    else
-    {
-        //rassemble les infos
-        QString titre;
-        QString path;
-        //si l'appel vient de la playlist en cours, déjà tout a disposition dans les différents champs
-        if(item->treeWidget() == current)
-        {
-            titre = item->text(0);
-            path = item->text(6);
-        }
-        else
-        {
-            //sinon, on rassemble les infos (titre, artiste, album) pour récupérer le path
-            titre = item->text(0);
-            QString album = item->parent()->text(0);
-            QString artiste = item->parent()->parent()->text(0);
-            QStringList song = db->getSong(titre,album,artiste);
-            path = song.takeAt(6);
-        }
-        //on a le path, le titre & le nom de l'item, on peut créer l'asso dans la db & afficher
-        QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(titre) << path);
-        bool found = false;
-        QTreeWidgetItem *pl;
-        //retrouver l'item, cf plus haut
-        for(int k=0;k<plists->topLevelItemCount() && !found;++k)
-        {
-            if(plists->topLevelItem(k)->text(0) == playlist)
-            {
-                db->addSgToPl(path,playlist);
-                pl = plists->topLevelItem(k);
-                found = true;
-            }
-        }
-        if(!found)
-        {
-            std::cerr << "erreur : Playlist inexistante." << std::endl;
-            exit(1);
-        }
-        pl->addChild(songItem);
-    }
+    statusBar->showMessage(tr("Enregistrement dans la playlist en cours"));
+    insert->setParam(playlist,item,niveau,wait);
+    insert->start();
 }
 
 /** @brief Slot pour ajouter la musique à la playlist courante et le jouer */
@@ -654,8 +625,8 @@ void MainWindow::refresh()
     }
 
     //on passe la file d'attente au thread et on le lance
-    thr->setParam(waitList);
-    thr->start();
+    scan->setParam(waitList);
+    scan->start();
 }
 
 /** @brief Slot pour regénérer le QTreeWidgetItem de la bibliothèque */
@@ -1131,6 +1102,7 @@ void MainWindow::clearCurrent()
 /** @brief Slot pour enregistrer la playlist courante dans une playlist */
 void MainWindow::currentToPl()
 {
+    QTreeWidgetItem *waitlist = new QTreeWidgetItem;
     //sélection du nom de la playlist et création
     QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
     if (!plName.isEmpty())
@@ -1139,7 +1111,20 @@ void MainWindow::currentToPl()
     //ajout de chaque chanson dans la playlist
     for(int i=0;i<current->topLevelItemCount();++i)
     {
-        insertPl(plName,current->topLevelItem(i),0);
+        waitlist->addChild(current->topLevelItem(i)->clone());
     }
+    insertPl(plName,waitlist,1,waitlist);
     statusBar->showMessage(tr("Liste de lecture enregistrée"));
+}
+
+/** @brief Slot pour effacer la biblio */
+void MainWindow::clearBiblio()
+{
+    while(biblio->takeTopLevelItem(0) != 0);
+}
+
+/** @brief Slot pour effacer la recherche */
+void MainWindow::clearRes()
+{
+    while(searchRes->takeTopLevelItem(0) != 0);
 }

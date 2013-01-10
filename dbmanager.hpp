@@ -35,7 +35,7 @@ public:
     int incrNb_played(QString,int);
     void addSgToPl(QString,QString);
     bool getCover(QString path, QImage *Image);
-
+    void upSong(QString,QString,QString,QString,QString);
 
 public slots :
     QStringList addSong(QString);

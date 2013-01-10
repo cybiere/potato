@@ -2,7 +2,6 @@
 #include <taglib/id3v2tag.h>
 #include <taglib/attachedpictureframe.h>
 
-
 /** @brief Constructeur privé du dbManager:
  * Création des tables, et initialisation du QSqlQuery.
  */
@@ -318,6 +317,34 @@ bool dbManager::getCover(QString path,QImage *Image)
     return false;
 }
 
+/** @brief Méthode pour mettre à jour les tags d'une chanson
+ * @param path : le chemin de la chanson à mettre à jour
+ * @param titre : le nouveau titre de la chanson
+ * @param album : le nouvel album de la chanson
+ * @param artist : le nouvel artiste de la chanson
+ * @param genre : le nouveau genre de la chanson
+ */
+void dbManager::upSong(QString path,QString titre,QString album,QString artist,QString genre)
+{
+    query.prepare("UPDATE song SET title=?, album=?, artist=?, genre=? WHERE file=?");
+        query.bindValue("1",titre);
+        query.bindValue("2",album);
+        query.bindValue("3",artist);
+        query.bindValue("4",genre);
+        query.bindValue("5",path);
+    query.exec();
+
+    //écriture des tags ID3 (UTF-8)
+    TagLib::FileRef f(path.toStdString().c_str());
+    TagLib::Tag *tag = f.tag();
+
+    tag->setTitle(titre.toStdString());
+    tag->setAlbum(album.toStdString());
+    tag->setArtist(artist.toStdString());
+    tag->setGenre(genre.toStdString());
+
+    f.save();
+}
 /** @variable instance de notre dbManager
  * Initialisé à NULL
  */

@@ -16,12 +16,16 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     dbmanager.cpp \
     wikiinfo.cpp \
-    thread.cpp
+    scandir.cpp \
+    insertpl.cpp \
+    tageditor.cpp
 
 HEADERS  += mainwindow.hpp \
     dbmanager.hpp \
     wikiinfo.hpp \
-    thread.hpp
+    scandir.hpp \
+    insertpl.hpp \
+    tageditor.hpp
 
 RESOURCES += \
     ressources.qrc
