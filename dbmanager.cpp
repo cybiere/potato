@@ -41,19 +41,21 @@ dbManager* dbManager::getInstance(){
        return singleton;
 }
 
-/** Méthode d'ajout d'une musique dans la BDD
- * @param file : musique à ajouter
- * @return song : liste des musiques ajoutées
+/** @brief Méthode d'ajout d'une musique dans la BDD avec lecture des tags
+ * @param file : chemin de la musique à ajouter
+ * @return song : musique ajoutée sous format prêt pour insertion dans la bibliothèque
  */
 QStringList dbManager::addSong(QString file)
 {
     QStringList song;
     QString artiste,titre,album,genre;
+    //on vérifie que la chanson ne soit pas déjà dans la base de données
     query.prepare("SELECT artist,title,album,genre,nb_played,rating FROM song WHERE file=?");
         query.bindValue(1,file);
     query.exec();
     if(!query.isValid())
     {
+        //lecture des tags ID3 (UTF-8)
         TagLib::FileRef f(file.toStdString().c_str());
         TagLib::Tag *tag = f.tag();
 
@@ -61,6 +63,7 @@ QStringList dbManager::addSong(QString file)
         titre = QString::fromUtf8(tag->title().toCString(true));
         album = QString::fromUtf8(tag->album().toCString(true));
         genre = QString::fromUtf8(tag->genre().toCString(true));
+
         if(artiste == "") artiste = tr("Inconnu");
         if(titre == "") titre = tr("Inconnu");
         if(album == "") album = tr("Inconnu");
@@ -76,6 +79,7 @@ QStringList dbManager::addSong(QString file)
     }
     else
     {
+        //si elle existait déjà, on récupère les tags depuis la db (requête select au dessus) pour le return
         query.first();
         artiste = query.value(0).toString();
         titre = query.value(1).toString();
@@ -122,10 +126,11 @@ void dbManager::delSrc(QString dir)
 }
 
 /** @brief Méthode pour récupérer la bibliothèque dans la BDD
- * @return songs : liste des albums de la bibliothèque
+ * @return songs : liste des chansons de la bibliothèque
  */
 QList<QStringList> *dbManager::getBiblio()
 {
+    //Chaque chanson est représentée par un QStringList pour l'ajout dans la bibliothèque
     QString artiste;
     QString album;
     QString titre;
@@ -166,7 +171,7 @@ QStringList *dbManager::getPlaylists()
 
 /** @brief Méthode pour récupérer les musiques d'une playlist
  * @param pl : id de la playlist
- * @return songs : liste des musiques de la playlist
+ * @return songs : liste des chemins des musiques de la playlist
  */
 QStringList *dbManager::getAssos(QString pl)
 {
@@ -183,7 +188,7 @@ QStringList *dbManager::getAssos(QString pl)
 
 /** @brief Méthode pour récupérer les informations d'une musique dans la BDD à partir de son chemin
  * @param path : chemin de la musique
- * @return liste des informations de la musique
+ * @return liste des informations de la musique (format complet, ajout à la lecture en cours)
  **/
 QStringList dbManager::getSong(QString path)
 {
@@ -199,7 +204,7 @@ QStringList dbManager::getSong(QString path)
  * @param titre : titre de la musique
  * @param album : album de la musique
  * @param artist : artiste de la musique
- * @return liste des informations de la musique
+ * @return liste des informations de la musique (format complet, ajout à la lecture en cours)
  */
 QStringList dbManager::getSong(QString titre,QString album,QString artist)
 {
@@ -214,7 +219,7 @@ QStringList dbManager::getSong(QString titre,QString album,QString artist)
 }
 
 /** @brief Méthode pour ajouter une musique dans une playlist.
- * @param sg : musique à ajouter
+ * @param sg : chemin de la musique à ajouter
  * @param pl : identifiant de la playlist
  */
 void dbManager::addSgToPl(QString sg, QString pl)
@@ -246,7 +251,7 @@ bool dbManager::addPl(QString nom)
 /** @brief Méthode pour incrémenter le nombre de lectures d'une musique
  * @param file : musique
  * @param oldNumber : nombre de lectures précédentes
- * @return oldNumber : noueau nombre de lectures
+ * @return oldNumber : nouveau nombre de lectures
  */
 int dbManager::incrNb_played(QString file, int oldNumber)
 {
@@ -259,14 +264,16 @@ int dbManager::incrNb_played(QString file, int oldNumber)
     return oldNumber;
 }
 
-/** @brief Méthode pour supprimer une musique d'une playlist.
+/** @brief Méthode pour supprimer une playlist et les associations avec les chansons.
  * @param name : nom de la musique à supprimer.
  */
 void dbManager::delPl(QString name)
 {
+    //supprime la playlist
     query.prepare("DELETE FROM playlist WHERE name=?");
          query.bindValue("1", name);
     query.exec();
+    //supprime les associations avec les chansons
     query.prepare("DELETE FROM asso_song_pl WHERE pl=?");
          query.bindValue("1", name);
     query.exec();

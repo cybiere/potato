@@ -88,7 +88,7 @@ public slots:
     void changeStatus(QString);
 
 signals :
-    void changeWikiInfo(QString);
+    void changeWikiInfo(QStringList);
 
 };
 

@@ -4,9 +4,9 @@
 #include <QtWebKit>
 #include <QtGui>
 
-/** @class Classe de gestion du bloc "Wiki" permettant d'afficher les informations sur l'artiste de la chanson en cours */
+/** @class Classe de gestion du bloc "Wiki" permettant d'afficher les informations sur la chanson en cours */
 
-class WikiInfo : public QWidget
+class WikiInfo : public QTabWidget
 {
     Q_OBJECT
 
@@ -14,14 +14,19 @@ class WikiInfo : public QWidget
 
 public:
     WikiInfo(void);
-    QWebView *page;
-    QProgressBar *load;
+    QWebView *wiki;
+    QWebView *lyrics;
+    QProgressBar *loadWiki;
+    QProgressBar *loadLyrics;
 
 public slots:
-    void search(QString);
-    void startLoad();
-    void loading(int);
-    void endLoad(bool);
+    void search(QStringList);
+    void startLoadWiki();
+    void startLoadLyrics();
+    void loadingWiki(int);
+    void loadingLyrics(int);
+    void endLoadWiki(bool);
+    void endLoadLyrics(bool);
 
 };
 

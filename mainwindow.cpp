@@ -273,7 +273,7 @@ MainWindow::MainWindow()
         separator4->setFrameShadow(QFrame::Sunken);
 
     WikiInfo *wikiView = new WikiInfo;
-    connect(this,SIGNAL(changeWikiInfo(QString)),wikiView,SLOT(search(QString)));
+    connect(this,SIGNAL(changeWikiInfo(QStringList)),wikiView,SLOT(search(QStringList)));
     rightLay->addWidget(wikiView);
     rightLay->addWidget(separator4);
     rightLay->addWidget(cov);
@@ -308,11 +308,12 @@ MainWindow::MainWindow()
 }
 
 /** @brief Méthode pour changer la page du block Wiki
- * @param item : page à charger.
+ * @param item : item sélectionner pour obtenir l'artiste à charger.
  */
 void MainWindow::changeDockInfo(QTreeWidgetItem *item,int)
 {
-   emit changeWikiInfo(item->text(1));
+    QStringList song = QStringList(item->text(0)) << item->text(1) << item->text(2);
+    emit changeWikiInfo(song);
 }
 
 /** @brief Méthode pour la recherche dans la bibliothèque
@@ -323,6 +324,7 @@ void MainWindow::changeSearch(QString searchTerm)
     QRegExp rx("*" + searchTerm + "*");
     rx.setPatternSyntax(QRegExp::Wildcard);
     rx.setCaseSensitivity(Qt::CaseInsensitive);
+    //Masque tous les éléments de searchRes ne correspondant pas à la recherche, affiche les autres.
     for(int i=0;i<searchRes->topLevelItemCount();++i)
     {
         if(!(rx.exactMatch(searchRes->topLevelItem(i)->text(0)) || rx.exactMatch(searchRes->topLevelItem(i)->text(1)) || rx.exactMatch(searchRes->topLevelItem(i)->text(2))))
@@ -337,6 +339,7 @@ void MainWindow::changeSearch(QString searchTerm)
  */
 void MainWindow::contextCurrent(QPoint pos)
 {
+    //n'affiche pas le menu si aucun item n'est sélectionné (current vide par exemple)
     if(current->currentItem() == NULL)
         return;
     QMenu *context = new QMenu();
@@ -361,6 +364,7 @@ void MainWindow::contextSearch(QPoint pos)
     if(searchRes->currentItem() == NULL)
         return;
     QMenu *context = new QMenu();
+    //rappelle le titre, l'artiste et l'album de la chanson sélectionnée
     QAction *titre = new QAction(searchRes->currentItem()->text(0),this);
     titre->setEnabled(false);
     QAction *album = new QAction(searchRes->currentItem()->text(1),this);
@@ -401,7 +405,7 @@ void MainWindow::contextBiblio(QPoint pos)
     context->exec(biblio->mapToGlobal(pos));
 }
 
-/** @brief Méthode pour gérer le menu déroulant dans le bloc Bibliothèque
+/** @brief Méthode pour gérer le menu déroulant dans le bloc des dossiers sources
  * @param pos : position de l'object cliqué
  */
 void MainWindow::contextSrc(QPoint pos)
@@ -438,21 +442,22 @@ void MainWindow::contextPl(QPoint pos)
     context->exec(plists->mapToGlobal(pos));
 }
 
-/** @brief Méthode pour ajouter un résultat de la recherche dans la playlist courante*/
+/** @brief Méthode pour ajouter un résultat de la recherche dans une playlist (depuis le menu déroulant)*/
 void MainWindow::addSearchToPl()
 {
     (static_cast<QAction *>(sender())->text(),searchRes->currentItem(),0);
 }
 
-/** @brief Méthode pour ajouter le contenu de la playlist courante dans une playlist */
+/** @brief Méthode pour ajouter le contenu de la playlist courante dans une playlist (depuis le menu déroulant) */
 void MainWindow::addCurrentToPl()
 {
     insertPl(static_cast<QAction *>(sender())->text(),current->currentItem(),0);
 }
 
-/** @brief Méthode pour ajouter des musiques de la bibliothèque à la playlist courante */
+/** @brief Méthode pour ajouter des musiques de la bibliothèque à une playlist (depuis le menu déroulant)*/
 void MainWindow::addBiblioToPl()
 {
+    //Niveau : 0 : chanson, 1 : album, 2 : artiste
     int niveau;
     QTreeWidgetItem *item = biblio->currentItem();
     if(item == NULL)
@@ -474,11 +479,12 @@ void MainWindow::addBiblioToPl()
 
 /** @brief Méthode pour insérer un item dans une playlist
  * @param playlist : playlist dans laquelle on insère.
- * @param item : item à intéresser
- * @param niveau : niveau
+ * @param item : item à insérer
+ * @param niveau : niveau du QTreeWidgetItem :  0 : chanson, 1 : album, 2 : artiste
  */
 void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
 {
+    //Traite différement si l'ajout provient de la recherche (pas les mêmes infos dans l'arbre)
     if(item->treeWidget() == searchRes)
     {
         QString path;
@@ -488,6 +494,7 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
         QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(item->text(0)) << path);
         bool found = false;
         QTreeWidgetItem *pl;
+        //recherche l'item de la playlist en question
         for(int k=0;k<plists->topLevelItemCount() && !found;++k)
         {
             if(plists->topLevelItem(k)->text(0) == playlist)
@@ -499,6 +506,7 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
         }
         if(!found)
         {
+            //playlist pas dans la view mais dans base de données (vu qu'envoyée via QAction) => ERREUR
             std::cerr << "erreur : Playlist inexistante." << std::endl;
             exit(1);
         }
@@ -523,8 +531,10 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
     //chanson
     else
     {
+        //rassemble les infos
         QString titre;
         QString path;
+        //si l'appel vient de la playlist en cours, déjà tout a disposition dans les différents champs
         if(item->treeWidget() == current)
         {
             titre = item->text(0);
@@ -532,15 +542,18 @@ void MainWindow::insertPl(QString playlist,QTreeWidgetItem *item,int niveau)
         }
         else
         {
+            //sinon, on rassemble les infos (titre, artiste, album) pour récupérer le path
             titre = item->text(0);
             QString album = item->parent()->text(0);
             QString artiste = item->parent()->parent()->text(0);
             QStringList song = db->getSong(titre,album,artiste);
             path = song.takeAt(6);
         }
+        //on a le path, le titre & le nom de l'item, on peut créer l'asso dans la db & afficher
         QTreeWidgetItem *songItem = new QTreeWidgetItem(QStringList(titre) << path);
         bool found = false;
         QTreeWidgetItem *pl;
+        //retrouver l'item, cf plus haut
         for(int k=0;k<plists->topLevelItemCount() && !found;++k)
         {
             if(plists->topLevelItem(k)->text(0) == playlist)
@@ -574,15 +587,17 @@ void MainWindow::addSourceDir()
 {
     //QFiledialog pour choisir le dossier en question, puis ajout à la base de données et à l'interface
     QString dir = QFileDialog::getExistingDirectory(this,tr("Choisir un dossier"), getenv("HOME"));
+    //Test pour éviter les erreurs si l'utilisateur annule le QFileDialog
     if(dir == "")
         return;
     db->addSrc(dir);
     srcDirList->addItem(dir);
 }
 
-/** @brief Slot pour supprimer un répertoire dan la list des répertoires à scanner */
+/** @brief Slot pour supprimer un répertoire dans la liste des répertoires à scanner */
 void MainWindow::delSourceDir()
 {
+    //rien de sélectionné, rien à supprimer !
     if(srcDirList->currentItem() == NULL)
         return;
     //suppression de l'élément courant dans la base de données puis dans l'interface
@@ -593,38 +608,46 @@ void MainWindow::delSourceDir()
 /** @brief Slot pour lister les répertoires à scanner et envoyer la liste au thread pour l'import */
 void MainWindow::refresh()
 {
+    //waitlist = ensemble des dossiers que le thread doit scanner.
+    //On lui fourgue une fois et après il fait son boulot tranquille
     QStringList waitList;
-    //scan récursif du dossier pour chaque entrée dans la liste des dossiers sources
-    int nbItems = srcDirList->count();
 
+    int nbItems = srcDirList->count();
     statusBar->showMessage(tr("Importation en cours..."));
     for(int i=0;i<nbItems;++i)
     {
         waitList << srcDirList->item(i)->text();
     }
+
+    //on passe la file d'attente au thread et on le lance
     thr->setParam(waitList);
     thr->start();
 }
 
-/** @brief Slot pour regénérer la bibliothèque */
+/** @brief Slot pour regénérer le QTreeWidgetItem de la bibliothèque */
 void MainWindow::regenBiblio()
 {
+    //On récupère la liste de toutes les chansons auprès de la db (une chanson = 1 QStringList) et on MàJ
     QList<QStringList> *songs = db->getBiblio();
     while(!songs->isEmpty())
     {
         insertSong(songs->takeFirst());
     }
+    //Un petit coup de tri à la fin pour faire tout beau tout joli
     biblio->sortItems(0,Qt::AscendingOrder);
 }
 
 /** @brief Slot pour regénéner les playlist */
 void MainWindow::regenPlaylists()
 {
+    //On fait le tour de toutes les playlists
     QStringList *pl = db->getPlaylists();
     while(!pl->isEmpty())
     {
+        //on leur créée un QTreeWidgetItem
         QTreeWidgetItem *playlist = new QTreeWidgetItem(QStringList(pl->takeFirst()));
         QStringList *assos = db->getAssos(playlist->text(0));
+        //Et on leur attache toutes les chansons associées
         while(!assos->isEmpty())
         {
             QString path = assos->takeFirst();
@@ -635,7 +658,7 @@ void MainWindow::regenPlaylists()
     }
 }
 
-/** @brief Méthode pour insérer une liste de musiques dans la bibliothèque */
+/** @brief Méthode pour insérer une chanson dans le QTreeWidgetItem de la bibliothèque */
 void MainWindow::insertSong(QStringList song)
 {
     QString title = song.takeFirst();
@@ -645,6 +668,7 @@ void MainWindow::insertSong(QStringList song)
     QTreeWidgetItem *artistItem;
     QTreeWidgetItem *albumItem;
 
+    //on cherche le QTreeWidgetItem de l'artiste pour ajouter dedans. Si il existe pas, on le créé.
     for(int i=0;i < biblio->topLevelItemCount() && !exists;++i)
     {
         if(biblio->topLevelItem(i)->text(0) == artist)
@@ -660,6 +684,7 @@ void MainWindow::insertSong(QStringList song)
     }
     exists = false;
 
+    //idem pour l'album
     for(int j=0;j < artistItem->childCount() && !exists;++j)
     {
         if(artistItem->child(j)->text(0) == album)
@@ -675,6 +700,7 @@ void MainWindow::insertSong(QStringList song)
     }
     exists = false;
 
+    //idem pour la chanson. Si elle existe pas on ajoute, sinon... Bah rien.
     for(int k=0;k < albumItem->childCount() && !exists;++k)
     {
         if(albumItem->child(k)->text(0) == title)
@@ -688,6 +714,7 @@ void MainWindow::insertSong(QStringList song)
     }
     exists = false;
 
+    //Ajoute la chanson dans la liste des résultats de recherche, si elle n'y est pas déjà.
     for(int l=0;l < searchRes->topLevelItemCount() && !exists;++l)
     {
         if(searchRes->topLevelItem(l)->text(0) == title && searchRes->topLevelItem(l)->text(1) == artist && searchRes->topLevelItem(l)->text(2) == album )
@@ -702,7 +729,7 @@ void MainWindow::insertSong(QStringList song)
     }
 }
 
-/** @brief Slopt pour afficher le bloc de recherche et cacher les autres*/
+/** @brief Slot pour afficher le bloc de recherche et cacher les autres*/
 void MainWindow::showSearch()
 {
     searchBlock->show();
@@ -711,7 +738,7 @@ void MainWindow::showSearch()
     options->hide();
 }
 
-/** @brief Slopt pour afficher le bloc des options et cacher les autres*/
+/** @brief Slot pour afficher le bloc des options et cacher les autres*/
 void MainWindow::showOptions()
 {
     searchBlock->hide();
@@ -720,7 +747,7 @@ void MainWindow::showOptions()
     options->show();
 }
 
-/** @brief Slopt pour afficher le bloc de la bibliothèque et cacher les autres*/
+/** @brief Slot pour afficher le bloc de la bibliothèque et cacher les autres*/
 void MainWindow::showBiblio()
 {
     searchBlock->hide();
@@ -729,7 +756,7 @@ void MainWindow::showBiblio()
     biblio->show();
 }
 
-/** @brief Slopt pour afficher le bloc des playlists et cacher les autres*/
+/** @brief Slot pour afficher le bloc des playlists et cacher les autres*/
 void MainWindow::showPlists()
 {
     searchBlock->hide();
@@ -755,7 +782,7 @@ void MainWindow::incrTimeCur(qint64 time)
     timeCurrent->setText(convertTime(time));
 }
 
-/** @brief Méthode pour convertir le temps au format "HMS"
+/** @brief Méthode pour convertir un qint64 en temps (mm:ss) et l'envoyer dans une QString pour l'afficher dans un QLabel
  * @param time : temps à convertir
  * @return temps converti
  */
@@ -768,13 +795,13 @@ QString MainWindow::convertTime(qint64 time)
     return converted;
 }
 
-/** @brief Slot pour ajouter une playlist à la playlist courante
+/** @brief Slot pour ajouter depuis la bibliothèque ou une playlist vers la playlist courante
  * @param item : item double cliqué
  */
 void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
 {
-    //Définir la nature de l'item double cliqué (Artiste,Album,Chanson) --> ajouter playlist + tard
-    //pas d'item parent = artiste
+    //Définir la nature de l'item double cliqué (Artiste,Album,Chanson,Playlist)
+    //pas d'item parent = artiste ou playlist (même comportement)
     if(item->parent() == NULL)
     {
         for(int i=0;i<item->childCount();++i)
@@ -805,12 +832,14 @@ void MainWindow::addToCurrent(QTreeWidgetItem * item, int)
  */
 void MainWindow::addSearchToCurrent(QTreeWidgetItem * item, int)
 {
+    //appel à la base de données pour récupérer les infos complètes de la chanson
     current->addTopLevelItem(new QTreeWidgetItem(db->getSong(item->text(0),item->text(2),item->text(1))));
 }
 
-/** @brief Slot pour lire une musique */
+/** @brief Slot pour lire/mettre en pause une musique */
 void MainWindow::play()
 {
+    //Si on est déjà en train de jouer, on met la musique en pause, change le QAction (play) et le titre
     if(media->state() == Phonon::PlayingState)
     {
         actionPlay->setIcon(QIcon(":/ico/play.png"));
@@ -820,8 +849,10 @@ void MainWindow::play()
     }
     else
     {
+        //Si on jouait pas déjà quelque chose, on lance le premier morceau de la liste en cours
         if(playing == NULL)
         {
+            //a condition qu'il y en ait un, pour éviter la segfault
             if(current->topLevelItemCount() == 0)
             {
                 return;
@@ -829,11 +860,13 @@ void MainWindow::play()
             playing = current->topLevelItem(0);
             media->setCurrentSource(playing->text(6));
         }
+        //on modifie le titre en conséquence, et le QAction pour mettre en pause.
         setWindowTitle(playing->text(0) + " - " + playing->text(1) + " - PotatoPlayer");
 
         actionPlay->setIcon(QIcon(":/ico/pause.png"));
         actionPlay->setText(tr("Pause"));
 
+        //On envoie la musique et on affiche la chanson en cours en gras
         media->play();
         bold();
     }
@@ -842,6 +875,7 @@ void MainWindow::play()
 /** @brief Slot pour arreter la lecture d'une musique */
 void MainWindow::stop()
 {
+    //on réinitialise le titre, remet le play/pause sur play, coupe la musique et efface le gras
     setWindowTitle("PotatoPlayer");
     actionPlay->setIcon(QIcon(":/ico/play.png"));
     actionPlay->setText(tr("Lecture"));
@@ -849,9 +883,10 @@ void MainWindow::stop()
     clear();
 }
 
-/** @brief Slot pour enlever le gras sur les différents champs de la musique lue */
+/** @brief Slot pour enlever le gras sur les différents champs de la musique en cours */
 void MainWindow::clear()
 {
+    //Evitons les segfault...
     if(playing == NULL)
         return;
     QFont font;
@@ -865,9 +900,10 @@ void MainWindow::clear()
     playing->setFont(6,font);
 }
 
-/** @brief Slot pour mettre en gras les différents champs de la musique lue */
+/** @brief Slot pour mettre en gras les différents champs de la musique en cours */
 void MainWindow::bold()
 {
+    //Evitons les segfault...
     if(playing == NULL)
         return;
     QFont font;
@@ -884,34 +920,40 @@ void MainWindow::bold()
 /** @brief Slot pour lire la musique précédente */
 void MainWindow::prev()
 {
+    //On vérifie que la playlist en cours ne soit pas vide.
     if(current->topLevelItemCount() == 0)
         return;
 
+    //On coupe la musique en cours
     stop();
+    //Si la chanson n'est pas la première de la liste en cours, pas de probleme.
     if(playing != current->topLevelItem(0))
     {
-        x();
+        clear();
         playing = current->itemAbove(playing);
         bold();
     }
+    //Si c'est la première, mais qu'on lit en boucle, on prend la dernière de la liste en cours
     else if(loopState == 2)
     {
         clear();
         playing = current->topLevelItem(current->topLevelItemCount()-1);
         bold();
     }
-
+    //Si c'est la première et qu'on boucle pas, on revient juste au début de la chanson
     media->setCurrentSource(playing->text(6));
     play();
 }
 
-/** @brief quand la musique se termine */
+/** @brief Fin du morceau (gestion boucle, incrémentation du nombre de lectures) */
 void MainWindow::songEnd()
 {
-    db->incrNb_played(playing->text(6),playing->text(4).toInt());
+    //Vérifier que l'utilisateur n'ait pas vidé la liste en cours entre temps (si oui on arrête simplement)
     if(current->indexOfTopLevelItem(playing) != -1)
     {
+        //mise à jour de l'affichage & de la base de données pour le nombre de lectures
         playing->setText(4,QString::number(db->incrNb_played(playing->text(6),playing->text(4).toInt())));
+        //si on repète un morceau, on relit, sinon on envoie le suivant
         if(loopState == 1)
             media->play();
         else
@@ -924,10 +966,13 @@ void MainWindow::songEnd()
 /** @brief Slot pour lire la musique suivante */
 void MainWindow::next()
 {
+    //vérifier que l'utilisateur n'ait pas vidé la liste de lecture en cours.
     if(current->topLevelItemCount() == 0)
         return;
 
+    //coupe la musique actuelle
     stop();
+    //si c'est pas le dernier de la liste, on envoie le suivant
     if(playing != current->topLevelItem(current->topLevelItemCount()-1))
     {
         clear();
@@ -936,6 +981,7 @@ void MainWindow::next()
         media->setCurrentSource(playing->text(6));
         play();
     }
+    //si c'est le dernier mais qu'on répète tout, on renvoie le premier
     else if(loopState == 2)
     {
         clear();
@@ -944,23 +990,27 @@ void MainWindow::next()
         media->setCurrentSource(playing->text(6));
         play();
     }
+    //sinon on stoppe
 }
 
-/** @brief Slot pour lire une musique en boucle */
+/** @brief Slot pour gérer la lecture en boucle */
 void MainWindow::loop()
 {
+    //Si on répètait rien, on passe a répéter une chanson (loopstate = 1)
     if(loopState == 0)
     {
         actionLoop->setIcon(QIcon(":/ico/loop_one.png"));
         actionLoop->setText(tr("Répéter tout"));
         loopState = 1;
     }
+    //si on répétait une chanson, on répète toute la playlist (loopstate = 2)
     else if(loopState == 1)
     {
         actionLoop->setIcon(QIcon(":/ico/loop_all.png"));
         actionLoop->setText(tr("Pas de répétition"));
         loopState = 2;
     }
+    //Si on répétait tout, on répète plus rien (loopstate = 0)
     else
     {
         actionLoop->setIcon(QIcon(":/ico/loop_off.png"));
@@ -969,7 +1019,7 @@ void MainWindow::loop()
     }
 }
 
-/** @brief Slot quand on double clique sur un item pour le sélectionner */
+/** @brief Slot quand on double clique sur un item de la playlist en cours pour le jouer */
 void MainWindow::selectedSong(QTreeWidgetItem *item, int)
 {
     stop();
@@ -982,7 +1032,9 @@ void MainWindow::selectedSong(QTreeWidgetItem *item, int)
 /** @brief Slot pour ajouter une playlist */
 void MainWindow::addPl()
 {
+    //récupère le nom que veut l'utilisateur
     QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
+    //Vérification en cas d'annulation
     if (!plName.isEmpty())
         if(db->addPl(plName))
             plists->addTopLevelItem(new QTreeWidgetItem(QStringList(plName)));
@@ -991,6 +1043,7 @@ void MainWindow::addPl()
 /** @brief Slot pour supprimer une playlist */
 void MainWindow::delPl()
 {
+    //Si rien de sélectionné, rien à supprimer
     if(plists->currentItem() == 0)
         return;
     //suppression de l'élément courant dans la base de données puis dans l'interface
@@ -998,10 +1051,12 @@ void MainWindow::delPl()
     plists->takeTopLevelItem(plists->indexOfTopLevelItem(plists->currentItem()));
 }
 
-/** @brief Slot pour sauvegarder la playlist courante */
+/** @brief Slot pour sauvegarder la playlist courante à la fermeture du player */
 void MainWindow::saveCurrent()
 {
+    //Ouvre le fichier PotatoSvg (écrase si déjà rempli, créé si inexistant)
     std::ofstream fichier("PotatoSvg");
+    //ajoute le chemin de chaque chanson dans le fichier (1 chemin/ligne)
     for(int i=0;i<current->topLevelItemCount();++i)
     {
         fichier << current->topLevelItem(i)->text(6).toStdString() << std::endl;
@@ -1009,9 +1064,10 @@ void MainWindow::saveCurrent()
     fichier.close();
 }
 
-/** @brief Slot pour charger la playlist courante. */
+/** @brief Slot pour charger au lancement la playlist sauvegardée précédemment. */
 void MainWindow::loadCurrent()
 {
+    //ouverture et lecture du fichier ligne par ligne, ajout dans la playlist en cours
     std::ifstream fichier("PotatoSvg");
     std::string chaine;
     QStringList liste;
@@ -1041,10 +1097,12 @@ void MainWindow::clearCurrent()
 /** @brief Slot pour enregistrer la playlist courante dans une playlist */
 void MainWindow::currentToPl()
 {
+    //sélection du nom de la playlist et création
     QString plName = QInputDialog::getText(this,tr("Nouvelle liste de lecture"),tr("Choississez le nom de la nouvelle liste de lecture") + " :",QLineEdit::Normal,"");
     if (!plName.isEmpty())
         if(db->addPl(plName))
             plists->addTopLevelItem(new QTreeWidgetItem(QStringList(plName)));
+    //ajout de chaque chanson dans la playlist
     for(int i=0;i<current->topLevelItemCount();++i)
     {
         insertPl(plName,current->topLevelItem(i),0);
