@@ -3,4 +3,4 @@ PotatoPlayer
 
 PotatoPlayer - Qt music player using phonon &amp; taglib
 
-Made by Nicolas Cosnard and Pegasus
+Made by Nicolas Cosnard and Pierre Guinault
